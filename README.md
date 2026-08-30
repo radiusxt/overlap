@@ -2,23 +2,9 @@
 
 **See what your portfolio actually holds**
 
-Overlap is a portfolio exposure tool that looks through your portfolio of individual stocks and exchange traded funds (ETFs) to show your *true* underlying exposure by country, sector and currency rather than by the ticker itself.
+A portfolio exposure tool that looks through your portfolio of individual stocks and exchange traded funds (ETFs) to show your *true* underlying exposure by country, sector and currency rather than by the ticker itself.
 
 Most portfolio trackers and visualisers stop at the ticker level. If you hold three different ETFs, each might quietly contain the same handful of companies, leaving you far more concentrated than your holdings list suggests. Overlap unwraps each fund's constituents and aggregates them alongside your direct holdings, so you can see where your money is and where it overlaps.
-
-## Quick Start
-
-1. Clone Repository
-
-```git clone https://github.com/radiusxt/overlap```
-
-2. Install Dependencies
-
-```npm install```
-
-3. Run Development Server
-
-```npm run dev```
 
 Tech Stack
 
@@ -30,9 +16,10 @@ Tech Stack
 
 **Backend**
 
-- Supabase with PostgreSQL
+- PostgreSQL (Supabase)
 - TypeScript
+- Python
 
-**Deployment
+**Deployment**
 
 - Vercel
