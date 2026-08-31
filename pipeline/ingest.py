@@ -20,11 +20,14 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
         "Currency": "currency",
         "Weight (%)": "weight_pct",
     })
-    return df[["etf_ticker", "constituent_ticker", "constituent_name",
-               "sector", "country", "currency", "weight_pct"]]
+    df = df[["etf_ticker", "constituent_ticker", "constituent_name",
+             "sector", "country", "currency", "weight_pct"]]
+    
+    return df.where(pd.notnull(df), None)
 
 def upsert(df: pd.DataFrame):
     conn = psycopg.connect(DB_URL)
+
     with conn.cursor() as cur:
         for row in df.itertuples(index=False):
             cur.execute(
@@ -44,4 +47,8 @@ def upsert(df: pd.DataFrame):
 
 if __name__ == "__main__":
     for ticker in TRACKED_ETFS:
-        upsert(normalize(fetch_holdings(ticker)))
+        try:
+          upsert(normalize(fetch_holdings(ticker)))
+
+        except Exception as e:
+            print(f"Failed to ingest {ticker}: {e}")
