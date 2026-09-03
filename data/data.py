@@ -1,27 +1,39 @@
 import io
 import os
-import requests
 import pandas as pd
 import psycopg
+import requests
 
 from dotenv import load_dotenv
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-}
-
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
-TRACKED_ETFS = ["A200", "NDQ", "HACK", "GEAR"]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+}
+
+BETASHARES_TICKERS = [
+    "A200",
+    "ASIA",
+    "BGBL",
+    "DHHF",
+    "NDQ",
+]
+
+ISHARES = []
+
+VANGUARD = []
 
 def fetch_holdings(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
 
     response = requests.get(url, headers=HEADERS)
-    response.raise_for_status()  # fail loudly if this ticker's file 404s or errors
+    response.raise_for_status()
 
-    df = pd.read_csv(io.StringIO(response.text), skiprows=7)
+    df = pd.read_csv(io.StringIO(response.text), skiprows=6)
+    df = df.dropna(subset=["Name"])
     df["etf_ticker"] = ticker
 
     return df
@@ -61,7 +73,7 @@ def upsert(df: pd.DataFrame):
     conn.close()
 
 if __name__ == "__main__":
-    for ticker in TRACKED_ETFS:
+    for ticker in BETASHARES_TICKERS:
         try:
           upsert(normalize(fetch_holdings(ticker)))
 

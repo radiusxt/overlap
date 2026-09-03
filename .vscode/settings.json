@@ -1,5 +1,16 @@
 {
-    "editor.tabSize": 2,
-    "editor.insertSpaces": true,
-    "editor.detectIndentation": false
+    "python.defaultInterpreterPath": "${workspaceFolder}/data/venv/bin/python",
+    "editor.detectIndentation": false,
+    "[typescript]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[typescriptreact]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[python]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
 }

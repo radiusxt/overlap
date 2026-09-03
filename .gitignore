@@ -20,9 +20,9 @@
 
 # misc
 .DS_Store
+*.csv
 *.pem
 *.png
-*.csv
 
 # debug
 npm-debug.log*
