@@ -1,4 +1,4 @@
-name: Ingest ETF Data
+name: Data Update
 
 on:
   schedule:
@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r ingestion/requirements.txt
-      - run: python ingestion/ingest_etf_data.py
+      - run: pip install -r data/requirements.txt
+      - run: python data/data.py
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           

@@ -1,14 +1,29 @@
+import io
 import os
+import requests
 import pandas as pd
 import psycopg
 
+from dotenv import load_dotenv
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+}
+
+load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 TRACKED_ETFS = ["A200", "NDQ", "HACK", "GEAR"]
 
 def fetch_holdings(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
-    df = pd.read_csv(url, skiprows=7)  # adjust after inspecting the raw file
+
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()  # fail loudly if this ticker's file 404s or errors
+
+    df = pd.read_csv(io.StringIO(response.text), skiprows=7)
     df["etf_ticker"] = ticker
+
     return df
 
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
@@ -51,4 +66,5 @@ if __name__ == "__main__":
           upsert(normalize(fetch_holdings(ticker)))
 
         except Exception as e:
-            print(f"Failed to ingest {ticker}: {e}")
+            print(f"Failed to download {ticker}: {e}")
+            
