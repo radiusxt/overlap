@@ -2,7 +2,7 @@ name: Database Update
 
 on:
   schedule:
-    # Triggers Daily at 22:00 UTC / 18:00 UTC-4 (NYC) / 08:00 UTC+10 (BNE)
+    # Triggers Daily at 21:30 UTC / 17:30 UTC-4 (NYC) / 07:30 UTC+10 (BNE)
     - cron: "30 21 * * *"
   # Can be manually triggered for testing or urgent updates
   workflow_dispatch:
