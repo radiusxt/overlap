@@ -2,31 +2,35 @@ import io
 import os
 import pandas as pd
 import psycopg
-import re
 import requests
 
 from dotenv import load_dotenv
-from functools import lru_cache
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
 BETASHARES_AUS = [
-    "A200",
-    "ASIA",
-    "BGBL",
-    #"DHHF",
-    "NDQ",
+    ("A200",),
+    #("ASIA",),
+    #("BGBL",),
+    #("DHHF",),
+    ("NDQ",),
 ]
 
-ISHARES_AUS = []
+ISHARES_AUS = [
+    ("IOZ", "251852", "ishares-core-s-p-asx-200-etf", "1478358644060"),
+    #("IVV", "275304", "fund", "1478358644060"),
+]
 
-VANGUARD_AUS = []
+VANGUARD_AUS = [
+    ("VAS",),
+    ("VGS",),
+]
 
 
 """ASX Data Fetching"""
@@ -43,32 +47,22 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
     return df
 
-@lru_cache(maxsize=1)
-def _ishares_aus_ticker_map() -> dict[str, str]:
-    base = "https://www.blackrock.com"
-
-    funds_html = requests.get(f"{base}/au/products/investment-funds").text
-    return dict(re.findall(
-        r'<a href="(/au/products/\d+/[\w-]+)">([A-Z]{2,5})</a>',
-        funds_html
-    ))
-
-def fetch_holdings_ishares_aus(ticker: str) -> pd.DataFrame:
-    base = "https://www.blackrock.com"
-
-    product_path = _ishares_aus_ticker_map()[ticker]
-    product_html = requests.get(f"{base}{product_path}").text
-    match = re.search(
-        rf'href="([^"]+\.ajax\?fileType=csv&fileName={ticker}_holdings[^"]*)"',
-        product_html,
+def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestamp: str) -> pd.DataFrame:
+    url = (
+        f"https://www.blackrock.com/au/products/{product_id}/{slug}/"
+        f"{timestamp}.ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
     )
 
-    if not match:
-        raise ValueError(f"No holdings CSV link found for {ticker}")
-    
-    csv_url = f"{base}{match.group(1)}"
-    csv_text = requests.get(csv_url).text
-    return pd.read_csv(io.StringIO(csv_text), skiprows=2)
+    response = requests.get(url, headers=HEADERS)
+    response.raise_for_status()
+
+    df = pd.read_csv(io.StringIO(response.text), skiprows=2)
+    df = df.dropna(subset=["Name"])
+    df["etf_ticker"] = ticker
+    df["country"] = "Australia"
+
+    return df
+
 
 """Database Functions"""
 
@@ -127,8 +121,9 @@ if __name__ == "__main__":
     for name, (tickers, fetch) in ISSUERS_AUS.items():
         for ticker in tickers:
             try:
-                upsert(normalize(fetch(ticker)))
+                upsert(normalize(fetch(*ticker)))
+                print(f"Successfully downloaded {ticker[0]}.")
 
             except Exception as e:
-                print(f"Failed to download {ticker} ({name}): {e}")
+                print(f"Failed to download {ticker[0]} ({name}): {e}")
                 
