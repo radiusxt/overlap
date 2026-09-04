@@ -22,9 +22,9 @@ BETASHARES_TICKERS = [
     "NDQ",
 ]
 
-ISHARES = []
+ISHARES_TICKERS = []
 
-VANGUARD = []
+VANGUARD_TICKERS = []
 
 def fetch_holdings(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
@@ -47,6 +47,7 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
         "Currency": "currency",
         "Weight (%)": "weight_pct",
     })
+    
     df = df[["etf_ticker", "constituent_ticker", "constituent_name",
              "sector", "country", "currency", "weight_pct"]]
     
@@ -69,6 +70,7 @@ def upsert(df: pd.DataFrame):
                 (row.etf_ticker, row.constituent_ticker, row.constituent_name,
                  row.sector, row.country, row.currency, row.weight_pct),
             )
+
     conn.commit()
     conn.close()
 

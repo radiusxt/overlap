@@ -2,9 +2,9 @@
 
 **See what your portfolio actually holds**
 
-A portfolio exposure tool that looks through your portfolio of individual stocks and exchange traded funds (ETFs) to show your *true* underlying exposure by country, sector and currency rather than by the ticker itself.
+An investment exposure tool that looks through your holdings of individual stocks and exchange traded funds (ETFs) to show your *true* underlying exposure by country, sector and currency rather than by the ticker itself.
 
-Most portfolio trackers and visualisers stop at the ticker level. If you hold three different ETFs, each might quietly contain the same handful of companies, leaving you far more concentrated than your holdings list suggests. Overlap unwraps each fund's constituents and aggregates them alongside your direct holdings, so you can see where your money is and where it overlaps.
+Most portfolio trackers, analysers and visualisers stop at the ticker level. If you hold three different ETFs, each might quietly contain the same handful of companies, leaving you far more concentrated than a glance of your holdings suggests. Overlap unwraps each fund's constituents and aggregates them alongside your direct holdings to uncover hidden risk.
 
 ## Tech Stack
 
@@ -16,10 +16,11 @@ Most portfolio trackers and visualisers stop at the ticker level. If you hold th
 
 **Backend**
 
-- PostgreSQL (Supabase)
+- PostgreSQL
 - TypeScript
 - Python
 
 **Deployment**
 
 - Vercel
+- Supabase
