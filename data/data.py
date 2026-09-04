@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import pandas as pd
 import psycopg
@@ -14,26 +15,14 @@ HEADERS = {
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
-BETASHARES_AUS = [
-    ("A200",),
-    #("ASIA",),
-    #("BGBL",),
-    #("DHHF",),
-    ("NDQ",),
-]
-
-ISHARES_AUS = [
-    ("IOZ", "251852", "ishares-core-s-p-asx-200-etf", "1478358644060"),
-    #("IVV", "275304", "fund", "1478358644060"),
-]
-
-VANGUARD_AUS = [
-    ("VAS",),
-    ("VGS",),
-]
-
 
 """ASX Data Fetching"""
+
+def _load_etfs(issuer_key: str, fields: list[str]) -> list[tuple]:
+    with open("./etfs.json") as f:
+        config = json.load(f)
+
+    return [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
 
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
@@ -111,9 +100,9 @@ def upsert(df: pd.DataFrame):
 """Main Program Loop"""
 
 ISSUERS_AUS = {
-    "betashares": (BETASHARES_AUS, fetch_holdings_betashares_aus),
-    "ishares": (ISHARES_AUS, fetch_holdings_ishares_aus),
-    #"vanguard": (VANGUARD_AUS, fetch_holdings_vanguard_aus),
+    "betashares": (_load_etfs("betashares", ["ticker"]), fetch_holdings_betashares_aus),
+    "ishares": (_load_etfs("ishares", ["ticker", "product_id", "slug", "timestamp"]), fetch_holdings_ishares_aus),
+    #"vanguard": (_load_etfs("vanguard", ["ticker"]), fetch_holdings_vanguard_aus),
 }
 
 if __name__ == "__main__":

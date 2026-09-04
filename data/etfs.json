@@ -1,0 +1,13 @@
+{
+  "betashares": [
+    {"ticker": "A200"},
+    {"ticker": "NDQ"}
+  ],
+  "ishares": [
+    {"ticker": "IOZ", "product_id": "251852", "slug": "ishares-core-s-p-asx-200-etf", "timestamp": "1478358644060"}
+  ],
+  "vanguard": [
+    {"ticker": "VAS"},
+    {"ticker": "VGS"}
+  ]
+}
