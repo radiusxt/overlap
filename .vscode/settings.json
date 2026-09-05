@@ -1,6 +1,12 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/data/venv/bin/python",
-    "editor.detectIndentation": false,
+    "[json]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[python]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
     "[typescript]": {
         "editor.tabSize": 2,
         "editor.insertSpaces": true
@@ -9,8 +15,6 @@
         "editor.tabSize": 2,
         "editor.insertSpaces": true
     },
-    "[python]": {
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true
-    },
+    "editor.detectIndentation": false,
+    "python.defaultInterpreterPath": "${workspaceFolder}/data/venv/bin/python",
 }

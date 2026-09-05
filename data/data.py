@@ -6,23 +6,25 @@ import psycopg
 import requests
 
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
+
+
+"""ASX Data Fetching"""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
-
-"""ASX Data Fetching"""
-
-def _load_etfs(issuer_key: str, fields: list[str]) -> list[tuple]:
-    with open("./etfs.json") as f:
+def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
+    with open(Path(__file__).parent / "etfs.json") as f:
         config = json.load(f)
 
-    return [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
+    tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
+    return tickers, fetch
 
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
@@ -72,7 +74,7 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
     return df.where(pd.notnull(df), None)
 
 # Update database records or create new records if they don't exist.
-# If there has been a rebalance, old holdings will be dropped.
+# If there has been a fund rebalance, old holdings will be dropped.
 def upsert(df: pd.DataFrame):
     connection = psycopg.connect(DB_URL)
 
@@ -100,9 +102,9 @@ def upsert(df: pd.DataFrame):
 """Main Program Loop"""
 
 ISSUERS_AUS = {
-    "betashares": (_load_etfs("betashares", ["ticker"]), fetch_holdings_betashares_aus),
-    "ishares": (_load_etfs("ishares", ["ticker", "product_id", "slug", "timestamp"]), fetch_holdings_ishares_aus),
-    #"vanguard": (_load_etfs("vanguard", ["ticker"]), fetch_holdings_vanguard_aus),
+    "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+    "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+    #"vanguard": _load_etfs("vanguard_aus", ["ticker"], fetch_holdings_vanguard_aus),
 }
 
 if __name__ == "__main__":
@@ -114,5 +116,5 @@ if __name__ == "__main__":
                 print(f"Successfully downloaded {ticker[0]}.")
 
             except Exception as e:
-                print(f"Failed to download {ticker[0]} ({name}): {e}")
+                print(f"Failed to download {ticker[0]} from {name}: {e}")
                 
