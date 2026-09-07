@@ -52,7 +52,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     df = pd.read_csv(io.StringIO(response.text), skiprows=2)
     df["etf_ticker"] = ticker
     df = df.dropna(subset=["Name"])
-    df["country"] = "Australia"
+    df["Country"] = df["Location"]
 
     return df
 
@@ -80,25 +80,60 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
     return df.where(pd.notnull(df), None)
 
 # Update database records or create new records if they don't exist
-# If there has been a fund rebalance, old holdings will be dropped
+# If there is a fund rebalance, old holdings will be dropped in place
 def upsert(df: pd.DataFrame):
     connection = psycopg.connect(DB_URL)
+    threshold = 0.9
 
     with connection.cursor() as cur:
-        for row in df.itertuples(index=False):
+        # Existing holding counts per fund, fetched once up front
+        cur.execute("select etf_ticker, count(*) from etf_holdings group by etf_ticker")
+        sizes = dict(cur.fetchall())
+
+        for etf_ticker, group in df.groupby("etf_ticker"):
+            count = sizes.get(etf_ticker, 0)
+            floor = threshold * count
+
+            # Skip if fetch is partial to prevent major database overwrite
+            if len(group) < floor:
+                print(f"Skipping {etf_ticker}: fetched {len(group)} / {floor} holdings.")
+                continue
+
+            for row in df.itertuples(index=False):
+                cur.execute(
+                    """
+                    insert into etf_holdings
+                        (etf_ticker, holding_ticker, holding_name,
+                        sector, country, currency, weight)
+                    values (%s, %s, %s, %s, %s, %s, %s)
+                    on conflict (etf_ticker, holding_ticker, holding_name)
+                    do update set
+                        sector = excluded.sector,
+                        country = excluded.country,
+                        currency = excluded.currency,
+                        weight = excluded.weight
+                    """,
+                    (row.etf_ticker, row.holding_ticker, row.holding_name, row.sector, row.country, row.currency, row.weight),
+                )
+
+            # Delete old holdings if not present in latest valid fetch
+            # This indicates a fund has rebalanced
             cur.execute(
                 """
-                insert into etf_holdings
-                    (etf_ticker, holding_ticker, holding_name,
-                    sector, country, currency, weight)
-                values (%s, %s, %s, %s, %s, %s, %s)
-                on conflict (etf_ticker, holding_ticker, holding_name)
-                do update set
-                    weight = excluded.weight
+                delete from etf_holdings
+                where etf_ticker = %s
+                  and not exists (
+                      select 1
+                      from unnest(%s::text[], %s::text[]) as keep(holding_ticker, holding_name)
+                      where keep.holding_ticker = etf_holdings.holding_ticker
+                        and keep.holding_name = etf_holdings.holding_name
+                  )
                 """,
-                (row.etf_ticker, row.holding_ticker, row.holding_name,
-                row.sector, row.country, row.currency, row.weight),
+                (etf_ticker, group["holding_ticker"].tolist(), group["holding_name"].tolist()),
             )
+
+            if cur.rowcount:
+                print(f"Deleted {cur.rowcount} stale holdings for {etf_ticker}.")
 
     connection.commit()
     connection.close()
@@ -121,11 +156,11 @@ if __name__ == "__main__":
             for ticker in tickers:
                 try:
                     upsert(normalize(fetch(*ticker)))
-                    print(f"Successfully downloaded {ticker[0]}.")
+                    print(f"Successfully downloaded {ticker[0]}.\n")
 
                 except Exception as e:
-                    print(f"Failed to download {ticker[0]} from {name}: {e}")
+                    print(f"Failed to download {ticker[0]} from {name}: {e}\n")
 
     finally:
         elapsed = time.perf_counter() - start
-        print(f"\nSync finished in {elapsed:.2f} seconds.")
+        print(f"Sync finished in {elapsed:.2f} seconds.")
