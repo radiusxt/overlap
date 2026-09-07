@@ -2,13 +2,13 @@ name: Database Sync
 
 on:
   schedule:
-    # Triggers on weekdays at 21:07 UTC / 17:07 UTC-4 (NYC) / 07:07 UTC+10 (BNE)
-    - cron: "7 21 * * 1-5"
+    # Triggers on weekdays at 20:07 UTC / 16:07 UTC-4 (NYC) / 06:07 UTC+10 (BNE)
+    - cron: "7 20 * * 1-5"
   # Can be manually triggered for testing purposes or urgent updates
   workflow_dispatch:
 
 jobs:
-  data:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

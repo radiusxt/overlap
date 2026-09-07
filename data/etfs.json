@@ -6,6 +6,12 @@
   ],
   "ishares_aus": [
     {
+      "ticker": "IAA",
+      "product_id": "273416",
+      "slug": "fund",
+      "timestamp": "1478358644060"
+    },
+    {
       "ticker": "IOZ",
       "product_id": "251852",
       "slug": "ishares-core-s-p-asx-200-etf",

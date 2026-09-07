@@ -56,6 +56,9 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 
     return df
 
+def fetch_holdings_vanguard_aus(ticker: str) -> pd.DataFrame:
+    pass
+
 
 """Database Functions"""
 
@@ -96,7 +99,7 @@ def upsert(df: pd.DataFrame):
 
             # Skip if fetch is partial to prevent major database overwrite
             if len(group) < floor:
-                print(f"Skipping {etf_ticker}: fetched {len(group)} / {floor} holdings.")
+                print(f"Skipping {etf_ticker}: only fetched {len(group)} / {floor} holdings.")
                 continue
 
             for row in df.itertuples(index=False):
