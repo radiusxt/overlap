@@ -5,14 +5,12 @@
 CREATE TABLE public.etf_holdings (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
   etf_ticker text NOT NULL,
-  constituent_ticker text NOT NULL,
-  constituent_name text NOT NULL,
+  holding_ticker text NOT NULL,
+  holding_name text NOT NULL,
   sector text,
   country text,
   currency text,
-  weight_pct numeric NOT NULL,
-  as_of_date date NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
+  weight numeric NOT NULL,
+  timestamp timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT etf_holdings_pkey PRIMARY KEY (id)
 );

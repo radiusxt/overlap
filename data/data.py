@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import psycopg
 import requests
+import time
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -12,7 +13,7 @@ load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
 
-"""ASX Data Fetching"""
+"""Data Fetching"""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -33,8 +34,9 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     response.raise_for_status()
 
     df = pd.read_csv(io.StringIO(response.text), skiprows=6)
-    df = df.dropna(subset=["Name"])
     df["etf_ticker"] = ticker
+    df = df.dropna(subset=["Name"])
+    df["Ticker"] = df["Ticker"].str.split().str[0]
 
     return df
 
@@ -48,8 +50,8 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     response.raise_for_status()
 
     df = pd.read_csv(io.StringIO(response.text), skiprows=2)
-    df = df.dropna(subset=["Name"])
     df["etf_ticker"] = ticker
+    df = df.dropna(subset=["Name"])
     df["country"] = "Australia"
 
     return df
@@ -60,16 +62,16 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 # Standardise column headers for database
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={
-        "Ticker": "constituent_ticker",
-        "Name": "constituent_name",
+        "Ticker": "holding_ticker",
+        "Name": "holding_name",
         "Sector": "sector",
         "Country": "country",
         "Currency": "currency",
-        "Weight (%)": "weight_pct",
+        "Weight (%)": "weight",
     })
 
-    df = df[["etf_ticker", "constituent_ticker", "constituent_name",
-             "sector", "country", "currency", "weight_pct"]]
+    df = df[["etf_ticker", "holding_ticker", "holding_name",
+             "sector", "country", "currency", "weight"]]
     
     return df.where(pd.notnull(df), None)
 
@@ -83,16 +85,15 @@ def upsert(df: pd.DataFrame):
             cur.execute(
                 """
                 insert into etf_holdings
-                    (etf_ticker, constituent_ticker, constituent_name,
-                    sector, country, currency, weight_pct, as_of_date)
-                values (%s, %s, %s, %s, %s, %s, %s, current_date)
-                on conflict (etf_ticker, constituent_ticker)
+                    (etf_ticker, holding_ticker, holding_name,
+                    sector, country, currency, weight)
+                values (%s, %s, %s, %s, %s, %s, %s)
+                on conflict (etf_ticker, holding_ticker, holding_name)
                 do update set
-                    weight_pct = excluded.weight_pct,
-                    as_of_date = excluded.as_of_date
+                    weight = excluded.weight
                 """,
-                (row.etf_ticker, row.constituent_ticker, row.constituent_name,
-                row.sector, row.country, row.currency, row.weight_pct),
+                (row.etf_ticker, row.holding_ticker, row.holding_name,
+                row.sector, row.country, row.currency, row.weight),
             )
 
     connection.commit()
@@ -101,20 +102,26 @@ def upsert(df: pd.DataFrame):
 
 """Main Program Loop"""
 
-ISSUERS_AUS = {
-    "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-    "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-    #"vanguard": _load_etfs("vanguard_aus", ["ticker"], fetch_holdings_vanguard_aus),
-}
-
 if __name__ == "__main__":
-    # Fetch data for ASX listed ETFs
-    for name, (tickers, fetch) in ISSUERS_AUS.items():
-        for ticker in tickers:
-            try:
-                upsert(normalize(fetch(*ticker)))
-                print(f"Successfully downloaded {ticker[0]}.")
+    start = time.perf_counter()
 
-            except Exception as e:
-                print(f"Failed to download {ticker[0]} from {name}: {e}")
-                
+    try:
+        ISSUERS_AUS = {
+            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            #"vanguard": _load_etfs("vanguard_aus", ["ticker"], fetch_holdings_vanguard_aus),
+        }
+        
+        # Fetch data for ASX listed ETFs
+        for name, (tickers, fetch) in ISSUERS_AUS.items():
+            for ticker in tickers:
+                try:
+                    upsert(normalize(fetch(*ticker)))
+                    print(f"Successfully downloaded {ticker[0]}.")
+
+                except Exception as e:
+                    print(f"Failed to download {ticker[0]} from {name}: {e}")
+
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"\nSync finished in {elapsed:.2f} seconds.")

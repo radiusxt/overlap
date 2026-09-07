@@ -1,6 +1,7 @@
 {
   "betashares_aus": [
     { "ticker": "A200" },
+    { "ticker": "BGBL" },
     { "ticker": "NDQ" }
   ],
   "ishares_aus": [
