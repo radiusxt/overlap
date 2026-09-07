@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: "3.13"
       - run: pip install -r data/requirements.txt
-      - run: python data/data.py
+      - run: python data/sync.py
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           

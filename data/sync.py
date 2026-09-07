@@ -59,7 +59,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 
 """Database Functions"""
 
-# Standardise column headers for database
+# Standardise column headers for database and drop rows with NaN
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
     df = df.rename(columns={
         "Ticker": "holding_ticker",
@@ -72,11 +72,15 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df[["etf_ticker", "holding_ticker", "holding_name",
              "sector", "country", "currency", "weight"]]
+
+    # Cull rows where sector is "NaN" or country is "NaN" or weight is "NaN" or weight is 0
+    reject = df["sector"].isna() | df["country"].isna() | df["weight"].isna() | (df["weight"] == 0)
+    df = df[~reject]
     
     return df.where(pd.notnull(df), None)
 
-# Update database records or create new records if they don't exist.
-# If there has been a fund rebalance, old holdings will be dropped.
+# Update database records or create new records if they don't exist
+# If there has been a fund rebalance, old holdings will be dropped
 def upsert(df: pd.DataFrame):
     connection = psycopg.connect(DB_URL)
 
