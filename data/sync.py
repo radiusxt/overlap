@@ -20,7 +20,7 @@ HEADERS = {
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
-# Load ETFs sequentially in order grouped by fund issuer.
+# Load ETFs sequentially in order grouped by fund issuer
 def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
     with open(Path(__file__).parent / "etfs.json") as f:
         config = json.load(f)
@@ -28,8 +28,13 @@ def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], 
     tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
     return tickers, fetch
 
-# Split a raw CSV into one chunk per 'Fund Holdings as of' section.
-# This is for feeder iShares funds that publish a second section with underlying holdings.
+# Loads mapping of GICS subindustries to their primary industries
+def _load_sectors() -> None:
+    with open(Path(__file__).parent / "gics.json") as f:
+        sectors = json.load(f)
+
+# Split a raw CSV into one chunk per 'Fund Holdings as of' section
+# This is for feeder iShares funds that publish a second section with underlying holdings
 def _split_blocks(text: str) -> list[str]:
     lines = text.splitlines()
     start_idxs = [
@@ -90,7 +95,6 @@ def fetch_holdings_vaneck_aus(ticker: str) -> pd.DataFrame:
 # Fetch holdings for a single Vanguard ASX listed ETF
 def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
-    
     items = []
     offset = 0
 
@@ -104,7 +108,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 
         items.extend(batch)
 
-        # Stop if we hit the last page (fewer items returned than requested)
+        # Stop if it's at the last page
         if len(batch) < 1500:
             break
 
@@ -112,8 +116,8 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 
     return (
         pd.DataFrame(items)
-        .assign(etf_ticker=ticker, Country="Australia", Currency="AUD")
         .dropna(subset=["name"])
+        .assign(etf_ticker=ticker, name=lambda d: d["name"].str.upper(), Country="Australia", Currency="AUD")
         .rename(columns={
             "ticker": "Ticker",
             "name": "Name",
