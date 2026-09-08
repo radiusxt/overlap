@@ -30,7 +30,7 @@ def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], 
 
 # Split a raw CSV into one chunk per 'Fund Holdings as of' section.
 # This is for feeder iShares funds that publish a second section with underlying holdings.
-def _split_holdings_blocks(text: str) -> list[str]:
+def _split_blocks(text: str) -> list[str]:
     lines = text.splitlines()
     start_idxs = [
         i for i, line in enumerate(lines)
@@ -49,12 +49,18 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
 
-    df = pd.read_csv(io.StringIO(response.text), skiprows=6)
-    df["etf_ticker"] = ticker
-    df = df.dropna(subset=["Name"])
-    df["Ticker"] = df["Ticker"].str.split().str[0]
+    return (
+        pd.read_csv(io.StringIO(response.text), skiprows=6)
+        .dropna(subset=["Name"])
+        .assign(
+            etf_ticker=ticker,
+            Ticker=lambda df: df["Ticker"].str.split().str[0]
+        )
+    )
 
-    return df
+# Fetch holdings for a single Global X ASX listed ETF
+def fetch_holdings_global_x_aus(ticker: str) -> pd.DataFrame:
+    pass
 
 # Fetch holdings for a single BlackRock ASX listed ETF
 def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestamp: str) -> pd.DataFrame:
@@ -66,65 +72,77 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
 
-    blocks = _split_holdings_blocks(response.text)
-    target_block = blocks[-1]
+    return (
+        pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2)
+        .dropna(subset=["Name"])
+        .drop(columns=["Currency"])
+        .rename(columns={"Market Currency": "Currency"})
+        .assign(
+            etf_ticker=ticker,
+            Country=lambda df: df["Location"]
+        )
+    )
 
-    df = pd.read_csv(io.StringIO(target_block), skiprows=2)
-    df["etf_ticker"] = ticker
-    df = df.dropna(subset=["Name"])
-    df["Country"] = df["Location"]
-
-    return df
+# Fetch holdings for a single VanEck ASX listed ETF
+def fetch_holdings_vaneck_aus(ticker: str) -> pd.DataFrame:
+    pass
 
 # Fetch holdings for a single Vanguard ASX listed ETF
 def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
+    
+    items = []
+    offset = 0
 
-    response = requests.get(url, params={"limit": 1500}, headers=HEADERS)
-    response.raise_for_status()
-    payload = response.json()["data"]
+    while True:
+        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS)
+        response.raise_for_status()
+        batch = response.json().get("data", {}).get("items", [])
 
-    items = payload["items"]
-    if len(items) != payload["totalHoldings"]:
-        print(f"{ticker}: expected {payload['totalHoldings']} holdings, got {len(items)}")
+        if not batch:
+            break
 
-    df = pd.DataFrame(items).rename(columns={
-        "ticker": "holding_ticker",
-        "name": "holding_name",
-        "sectorName": "sector",
-        "countryCode": "country",
-        "marketValPercent": "weight",
-    })
+        items.extend(batch)
 
-    df = df.dropna(subset=["Name"])
+        # Stop if we hit the last page (fewer items returned than requested)
+        if len(batch) < 1500:
+            break
 
-    df["etf_ticker"] = ticker
-    df["currency"] = df["country"].map({"AU": "AUD"})
+        offset += 1500
 
-    return df[["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]]
+    return (
+        pd.DataFrame(items)
+        .assign(etf_ticker=ticker, Country="Australia", Currency="AUD")
+        .dropna(subset=["name"])
+        .rename(columns={
+            "ticker": "Ticker",
+            "name": "Name",
+            "sectorName": "Sector",
+            "marketValPercent": "Weight (%)",
+        })
+    )
 
 
 """Database Functions"""
 
-# Standardise column headers for database and drop rows with NaN
+# Standardise column headers for database, drop invalid rows and use at most 6 decimal places
 def normalize(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.rename(columns={
-        "Ticker": "holding_ticker",
-        "Name": "holding_name",
-        "Sector": "sector",
-        "Country": "country",
-        "Currency": "currency",
-        "Weight (%)": "weight",
-    })
+    cols = ["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]
 
-    df = df[["etf_ticker", "holding_ticker", "holding_name",
-             "sector", "country", "currency", "weight"]]
-
-    # Cull rows where sector is "NaN" or country is "NaN" or (weight is "NaN" or non-positive)
-    reject = df["sector"].isna() | df["country"].isna() | df["weight"].isna() | (df["weight"] <= 0)
-    df = df[~reject]
-    
-    return df.where(pd.notnull(df), None)
+    return (
+        df.rename(columns={
+            "Ticker": "holding_ticker",
+            "Name": "holding_name",
+            "Sector": "sector",
+            "Country": "country",
+            "Currency": "currency",
+            "Weight (%)": "weight",
+        })
+        [cols]
+        .assign(weight=lambda d: d["weight"].round(6))
+        .loc[lambda d: d["sector"].notna() & d["country"].notna() & (d["weight"] > 0)]
+        .where(pd.notnull, None)
+    )
 
 # Update database records or create new records if they don't exist
 # If there is a fund rebalance, old holdings will be dropped in place
@@ -140,34 +158,37 @@ def upsert(df: pd.DataFrame):
         for etf_ticker, group in df.groupby("etf_ticker"):
             count = sizes.get(etf_ticker, 0)
             floor = threshold * count
-            new = 0
 
             # Skip if fetch is partial to prevent major database overwrite
             if len(group) < floor:
                 print(f"Skipping {etf_ticker}: only fetched {len(group)} / {floor} holdings.")
                 continue
 
-            for row in group.itertuples(index=False):
-                cur.execute(
-                    """
-                    insert into etf_holdings
-                        (etf_ticker, holding_ticker, holding_name,
-                        sector, country, currency, weight)
-                    values (%s, %s, %s, %s, %s, %s, %s)
-                    on conflict (etf_ticker, holding_ticker, holding_name)
-                    do update set
-                        sector = excluded.sector,
-                        country = excluded.country,
-                        currency = excluded.currency,
-                        weight = excluded.weight
-                    returning (xmax = 0) as inserted
-                    """,
-                    (row.etf_ticker, row.holding_ticker, row.holding_name, row.sector,
-                            row.country, row.currency, row.weight),
-                )
-
-                if cur.fetchone()[0]:
-                    new += 1
+            cur.execute(
+                """
+                insert into etf_holdings
+                    (etf_ticker, holding_ticker, holding_name, sector, country, currency, weight)
+                select * from unnest(%s::text[], %s::text[], %s::text[], %s::text[], %s::text[], %s::text[], %s::numeric[])
+                on conflict (etf_ticker, holding_ticker, holding_name)
+                do update set
+                    sector = excluded.sector,
+                    country = excluded.country,
+                    currency = excluded.currency,
+                    weight = excluded.weight
+                returning (xmax = 0) as inserted
+                """,
+                (
+                    group["etf_ticker"].tolist(),
+                    group["holding_ticker"].tolist(),
+                    group["holding_name"].tolist(),
+                    group["sector"].tolist(),
+                    group["country"].tolist(),
+                    group["currency"].tolist(),
+                    group["weight"].tolist(),
+                ),
+            )
+            
+            new = sum(inserted for (inserted,) in cur.fetchall())
 
             if new:
                 print(f"Added {new} new holding{'s' if new > 1 else ''} for {etf_ticker}.")
@@ -176,13 +197,12 @@ def upsert(df: pd.DataFrame):
             cur.execute(
                 """
                 delete from etf_holdings
-                where etf_ticker = %s
-                  and not exists (
-                      select 1
-                      from unnest(%s::text[], %s::text[]) as keep(holding_ticker, holding_name)
-                      where keep.holding_ticker = etf_holdings.holding_ticker
+                where etf_ticker = %s and not exists (
+                    select 1
+                    from unnest(%s::text[], %s::text[]) as keep(holding_ticker, holding_name)
+                    where keep.holding_ticker = etf_holdings.holding_ticker
                         and keep.holding_name = etf_holdings.holding_name
-                  )
+                )
                 """,
                 (etf_ticker, group["holding_ticker"].tolist(), group["holding_name"].tolist()),
             )
@@ -201,8 +221,8 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            #"betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            #"ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
             "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         

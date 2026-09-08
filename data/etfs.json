@@ -4,6 +4,9 @@
     { "ticker": "BGBL" },
     { "ticker": "NDQ" }
   ],
+  "global_x_aus": [
+    
+  ],
   "ishares_aus": [
     {
       "ticker": "IAA",
@@ -23,6 +26,9 @@
       "slug": "fund",
       "timestamp": "1478358644060"
     }
+  ],
+  "vaneck_aus": [
+
   ],
   "vanguard_aus": [
     {
