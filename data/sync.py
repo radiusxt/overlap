@@ -13,7 +13,7 @@ load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
 
-"""Helper Functions"""
+"""Utility Functions"""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -77,8 +77,31 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     return df
 
 # Fetch holdings for a single Vanguard ASX listed ETF
-def fetch_holdings_vanguard_aus(ticker: str) -> pd.DataFrame:
-    pass
+def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
+    url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
+
+    response = requests.get(url, params={"limit": 1500}, headers=HEADERS)
+    response.raise_for_status()
+    payload = response.json()["data"]
+
+    items = payload["items"]
+    if len(items) != payload["totalHoldings"]:
+        print(f"{ticker}: expected {payload['totalHoldings']} holdings, got {len(items)}")
+
+    df = pd.DataFrame(items).rename(columns={
+        "ticker": "holding_ticker",
+        "name": "holding_name",
+        "sectorName": "sector",
+        "countryCode": "country",
+        "marketValPercent": "weight",
+    })
+
+    df = df.dropna(subset=["Name"])
+
+    df["etf_ticker"] = ticker
+    df["currency"] = df["country"].map({"AU": "AUD"})
+
+    return df[["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]]
 
 
 """Database Functions"""
@@ -147,7 +170,7 @@ def upsert(df: pd.DataFrame):
                     new += 1
 
             if new:
-                print(f"Added {new} new holdings for {etf_ticker}.")
+                print(f"Added {new} new holding{'s' if new > 1 else ''} for {etf_ticker}.")
 
             # Delete old holdings if not present in latest valid fetch due to rebalancing or FX movements
             cur.execute(
@@ -165,7 +188,7 @@ def upsert(df: pd.DataFrame):
             )
 
             if cur.rowcount:
-                print(f"Removed {cur.rowcount} stale holdings for {etf_ticker}.")
+                print(f"Removed {cur.rowcount} stale holding{'s' if new > 1 else ''} for {etf_ticker}.")
 
     connection.commit()
     connection.close()
@@ -178,9 +201,9 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-            #"vanguard": _load_etfs("vanguard_aus", ["ticker"], fetch_holdings_vanguard_aus),
+            #"betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            #"ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         
         # Fetch data for ASX listed ETFs

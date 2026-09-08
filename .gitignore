@@ -23,6 +23,7 @@
 *.csv
 *.pem
 *.png
+*.xlsx
 
 # debug
 npm-debug.log*

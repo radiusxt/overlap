@@ -25,7 +25,9 @@
     }
   ],
   "vanguard_aus": [
-    { "ticker": "VAS" },
-    { "ticker": "VGS" }
+    {
+      "ticker": "VAS",
+      "product_id": "8205"
+    }
   ]
 }
