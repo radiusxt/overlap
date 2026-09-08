@@ -46,7 +46,7 @@ def _split_blocks(text: str) -> list[str]:
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
 
-    response = requests.get(url, headers=HEADERS)
+    response = requests.get(url, headers=HEADERS, timeout=20)
     response.raise_for_status()
 
     return (
@@ -69,7 +69,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         f"{timestamp}.ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
     )
 
-    response = requests.get(url, headers=HEADERS)
+    response = requests.get(url, headers=HEADERS, timeout=20)
     response.raise_for_status()
 
     return (
@@ -95,7 +95,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     offset = 0
 
     while True:
-        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS)
+        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS, timeout=20)
         response.raise_for_status()
         batch = response.json().get("data", {}).get("items", [])
 
