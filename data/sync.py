@@ -13,13 +13,14 @@ load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
 
-"""Data Fetching"""
+"""Helper Functions"""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
+# Load ETFs sequentially in order grouped by fund issuer.
 def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
     with open(Path(__file__).parent / "etfs.json") as f:
         config = json.load(f)
@@ -27,6 +28,21 @@ def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], 
     tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
     return tickers, fetch
 
+# Split a raw CSV into one chunk per 'Fund Holdings as of' section.
+# This is for feeder iShares funds that publish a second section with underlying holdings.
+def _split_holdings_blocks(text: str) -> list[str]:
+    lines = text.splitlines()
+    start_idxs = [
+        i for i, line in enumerate(lines)
+        if line.lstrip("\ufeff").strip().startswith("Fund Holdings as of")
+    ]
+    start_idxs.append(len(lines))
+    return ["\n".join(lines[start:end]) for start, end in zip(start_idxs, start_idxs[1:])]
+
+
+"""Data Fetching"""
+
+# Fetch holdings for a single BetaShares ASX listed ETF
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
 
@@ -40,6 +56,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
     return df
 
+# Fetch holdings for a single BlackRock ASX listed ETF
 def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestamp: str) -> pd.DataFrame:
     url = (
         f"https://www.blackrock.com/au/products/{product_id}/{slug}/"
@@ -49,13 +66,17 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     response = requests.get(url, headers=HEADERS)
     response.raise_for_status()
 
-    df = pd.read_csv(io.StringIO(response.text), skiprows=2)
+    blocks = _split_holdings_blocks(response.text)
+    target_block = blocks[-1]
+
+    df = pd.read_csv(io.StringIO(target_block), skiprows=2)
     df["etf_ticker"] = ticker
     df = df.dropna(subset=["Name"])
     df["Country"] = df["Location"]
 
     return df
 
+# Fetch holdings for a single Vanguard ASX listed ETF
 def fetch_holdings_vanguard_aus(ticker: str) -> pd.DataFrame:
     pass
 
@@ -76,8 +97,8 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
     df = df[["etf_ticker", "holding_ticker", "holding_name",
              "sector", "country", "currency", "weight"]]
 
-    # Cull rows where sector is "NaN" or country is "NaN" or weight is "NaN" or weight is 0
-    reject = df["sector"].isna() | df["country"].isna() | df["weight"].isna() | (df["weight"] == 0)
+    # Cull rows where sector is "NaN" or country is "NaN" or (weight is "NaN" or non-positive)
+    reject = df["sector"].isna() | df["country"].isna() | df["weight"].isna() | (df["weight"] <= 0)
     df = df[~reject]
     
     return df.where(pd.notnull(df), None)
@@ -96,13 +117,14 @@ def upsert(df: pd.DataFrame):
         for etf_ticker, group in df.groupby("etf_ticker"):
             count = sizes.get(etf_ticker, 0)
             floor = threshold * count
+            new = 0
 
             # Skip if fetch is partial to prevent major database overwrite
             if len(group) < floor:
                 print(f"Skipping {etf_ticker}: only fetched {len(group)} / {floor} holdings.")
                 continue
 
-            for row in df.itertuples(index=False):
+            for row in group.itertuples(index=False):
                 cur.execute(
                     """
                     insert into etf_holdings
@@ -115,12 +137,19 @@ def upsert(df: pd.DataFrame):
                         country = excluded.country,
                         currency = excluded.currency,
                         weight = excluded.weight
+                    returning (xmax = 0) as inserted
                     """,
-                    (row.etf_ticker, row.holding_ticker, row.holding_name, row.sector, row.country, row.currency, row.weight),
+                    (row.etf_ticker, row.holding_ticker, row.holding_name, row.sector,
+                            row.country, row.currency, row.weight),
                 )
 
-            # Delete old holdings if not present in latest valid fetch
-            # This indicates a fund has rebalanced
+                if cur.fetchone()[0]:
+                    new += 1
+
+            if new:
+                print(f"Added {new} new holdings for {etf_ticker}.")
+
+            # Delete old holdings if not present in latest valid fetch due to rebalancing or FX movements
             cur.execute(
                 """
                 delete from etf_holdings
@@ -136,7 +165,7 @@ def upsert(df: pd.DataFrame):
             )
 
             if cur.rowcount:
-                print(f"Deleted {cur.rowcount} stale holdings for {etf_ticker}.")
+                print(f"Removed {cur.rowcount} stale holdings for {etf_ticker}.")
 
     connection.commit()
     connection.close()
@@ -159,11 +188,11 @@ if __name__ == "__main__":
             for ticker in tickers:
                 try:
                     upsert(normalize(fetch(*ticker)))
-                    print(f"Successfully downloaded {ticker[0]}.\n")
+                    print(f"Successfully downloaded ASX: {ticker[0]} from {name}.\n")
 
                 except Exception as e:
-                    print(f"Failed to download {ticker[0]} from {name}: {e}\n")
+                    print(f"Failed to download ASX: {ticker[0]} from {name}: {e}\n")
 
     finally:
         elapsed = time.perf_counter() - start
-        print(f"Sync finished in {elapsed:.2f} seconds.")
+        print(f"Sync finished in {elapsed:.0f} seconds.")
