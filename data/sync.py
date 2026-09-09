@@ -3,24 +3,27 @@ import json
 import os
 import pandas as pd
 import psycopg
+import pycountry
 import requests
 import time
 
+from babel.numbers import get_territory_currencies
 from dotenv import load_dotenv
+from functools import lru_cache
 from pathlib import Path
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 
 
-"""Utility Functions"""
+"""Utils"""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
-# Loads mapping of GICS subindustries to GICS industries
+# Load a mapping of GICS subindustries to GICS industries
 # Reference: https://www.msci.com/indexes/index-resources/gics
 with open(Path(__file__).parent / "gics.json") as f:
     sectors = json.load(f)
@@ -43,6 +46,29 @@ def _split_blocks(text: str) -> list[str]:
     ]
     start_idxs.append(len(lines))
     return ["\n".join(lines[start:end]) for start, end in zip(start_idxs, start_idxs[1:])]
+
+# Map an ISO 3166-1 alpha-2 code (e.g. 'US', 'JP') to (Country name, Currency)
+# Returns (None, None) for missing/unrecognised codes
+@lru_cache(maxsize=None)
+def _country_currency(country_code: str | None) -> tuple[str | None, str | None]:
+    if not isinstance(country_code, str) or not country_code.strip():
+        return None, None
+
+    try:
+        country = pycountry.countries.get(alpha_2=country_code)
+
+    except LookupError:
+        country = None
+
+    name = (getattr(country, "common_name", None) or getattr(country, "name", None)) if country else None
+
+    try:
+        currency = get_territory_currencies(country_code, tender=True, non_tender=False)[0]
+
+    except (LookupError, IndexError):
+        currency = None
+
+    return name, currency
 
 
 """Data Fetching"""
@@ -124,8 +150,8 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
             etf_ticker=ticker,
             name=lambda df: df["name"].str.upper(),
             sectorName=lambda df: df["sectorName"].map(sectors),
-            Country="Australia",
-            Currency="AUD"
+            Country=lambda df: df["countryCode"].map(lambda c: _country_currency(c)[0]),
+            Currency=lambda df: df["countryCode"].map(lambda c: _country_currency(c)[1]),
         )
         .rename(columns={
             "ticker": "Ticker",

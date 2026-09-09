@@ -5,7 +5,9 @@
     { "ticker": "NDQ" }
   ],
   "global_x_aus": [
-    
+    { "ticker": "GOLD" },
+    { "ticker": "SEMI" },
+    { "ticker": "TECH" }
   ],
   "ishares_aus": [
     {
@@ -28,12 +30,16 @@
     }
   ],
   "vaneck_aus": [
-
+    { "ticker": "GDX" }
   ],
   "vanguard_aus": [
     {
       "ticker": "VAS",
       "product_id": "8205"
+    },
+    {
+      "ticker": "VGS",
+      "product_id": "8212"
     }
   ]
 }

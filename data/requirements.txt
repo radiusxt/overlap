@@ -1,4 +1,6 @@
+babel
 pandas
 psycopg[binary]
+pycountry
 python-dotenv
 requests
