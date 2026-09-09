@@ -20,6 +20,11 @@ HEADERS = {
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 }
 
+# Loads mapping of GICS subindustries to GICS industries
+# Reference: https://www.msci.com/indexes/index-resources/gics
+with open(Path(__file__).parent / "gics.json") as f:
+    sectors = json.load(f)
+
 # Load ETFs sequentially in order grouped by fund issuer
 def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
     with open(Path(__file__).parent / "etfs.json") as f:
@@ -27,11 +32,6 @@ def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], 
 
     tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
     return tickers, fetch
-
-# Loads mapping of GICS subindustries to their primary industries
-def _load_sectors() -> None:
-    with open(Path(__file__).parent / "gics.json") as f:
-        sectors = json.load(f)
 
 # Split a raw CSV into one chunk per 'Fund Holdings as of' section
 # This is for feeder iShares funds that publish a second section with underlying holdings
@@ -51,7 +51,7 @@ def _split_blocks(text: str) -> list[str]:
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
 
-    response = requests.get(url, headers=HEADERS, timeout=20)
+    response = requests.get(url, headers=HEADERS, timeout=15)
     response.raise_for_status()
 
     return (
@@ -59,7 +59,8 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
         .dropna(subset=["Name"])
         .assign(
             etf_ticker=ticker,
-            Ticker=lambda df: df["Ticker"].str.split().str[0]
+            Ticker=lambda df: df["Ticker"].str.split().str[0],
+            Sector=lambda df: df["Sector"].replace({"Healthcare": "Health Care"}),
         )
     )
 
@@ -74,7 +75,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         f"{timestamp}.ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
     )
 
-    response = requests.get(url, headers=HEADERS, timeout=20)
+    response = requests.get(url, headers=HEADERS, timeout=15)
     response.raise_for_status()
 
     return (
@@ -84,7 +85,8 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         .rename(columns={"Market Currency": "Currency"})
         .assign(
             etf_ticker=ticker,
-            Country=lambda df: df["Location"]
+            Sector=lambda df: df["Sector"].replace({"Communication": "Communication Services"}),
+            Country=lambda df: df["Location"],
         )
     )
 
@@ -98,8 +100,9 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     items = []
     offset = 0
 
+    # Vanguard limits 1500 per fetch, thus funds with >1500 holdings will require multiple fetches
     while True:
-        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS, timeout=20)
+        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS, timeout=15)
         response.raise_for_status()
         batch = response.json().get("data", {}).get("items", [])
 
@@ -108,7 +111,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 
         items.extend(batch)
 
-        # Stop if it's at the last page
+        # Stop if it's at the last batch
         if len(batch) < 1500:
             break
 
@@ -117,7 +120,13 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     return (
         pd.DataFrame(items)
         .dropna(subset=["name"])
-        .assign(etf_ticker=ticker, name=lambda d: d["name"].str.upper(), Country="Australia", Currency="AUD")
+        .assign(
+            etf_ticker=ticker,
+            name=lambda df: df["name"].str.upper(),
+            sectorName=lambda df: df["sectorName"].map(sectors),
+            Country="Australia",
+            Currency="AUD"
+        )
         .rename(columns={
             "ticker": "Ticker",
             "name": "Name",

@@ -1,6 +1,5 @@
 {
   "Communication Services": "Communication Services",
-  "Communication": "Communication Services",
   "Diversified Telecommunication Services": "Communication Services",
   "Entertainment": "Communication Services",
   "Interactive Media & Services": "Communication Services",
@@ -33,7 +32,6 @@
 
   "Health Care": "Health Care",
   "Biotechnology": "Health Care",
-  "Healthcare" : "Health Care",
   "Health Care Equipment & Supplies": "Health Care",
   "Health Care Providers & Services": "Health Care",
   "Health Care Technology": "Health Care",
