@@ -82,7 +82,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
     return (
         pd.read_csv(io.StringIO(response.text), skiprows=6)
-        .dropna(subset=["Ticker", "Name"])
+        .dropna(subset=["Name"])
         .assign(
             etf_ticker=ticker,
             Ticker=lambda df: df["Ticker"].str.split().str[0],
@@ -97,8 +97,8 @@ def fetch_holdings_global_x_aus(ticker: str) -> pd.DataFrame:
 # Fetch holdings for a single BlackRock ASX listed ETF
 def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestamp: str) -> pd.DataFrame:
     url = (
-        f"https://www.blackrock.com/au/products/{product_id}/{slug}/"
-        f"{timestamp}.ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
+        f"https://www.blackrock.com/au/products/{product_id}/{slug}/{timestamp}"
+        f".ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
     )
 
     response = requests.get(url, headers=HEADERS, timeout=15)
@@ -106,7 +106,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 
     return (
         pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2)
-        .dropna(subset=["Ticker", "Name"])
+        .dropna(subset=["Name"])
         .drop(columns=["Currency"])
         .rename(columns={"Market Currency": "Currency"})
         .assign(
@@ -119,32 +119,17 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 # Fetch holdings for a single Vanguard ASX listed ETF
 def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
-    items = []
-    offset = 0
-
-    # Vanguard limits 1500 per fetch, thus funds with >1500 holdings will require multiple fetches
-    while True:
-        response = requests.get(url, params={"limit": 1500, "offset": offset}, headers=HEADERS, timeout=15)
-        response.raise_for_status()
-        batch = response.json().get("data", {}).get("items", [])
-        
-        if not batch:
-            break
-
-        items.extend(batch)
-
-        # Stop if it's at the last batch
-        if len(batch) < 1500:
-            break
-
-        offset += 1500
+   
+    response = requests.get(url, params={"limit": 1500}, headers=HEADERS, timeout=15)
+    response.raise_for_status()
+    items = response.json().get("data", {}).get("items", [])
 
     df = (
         pd.DataFrame(items)
-        .dropna(subset=["ticker", "name" ])
+        .dropna(subset=["name"])
         .assign(
             etf_ticker=ticker,
-            ticker=lambda df: df["ticker"].fillna(df["name"]),
+            ticker=lambda df: df["ticker"].fillna(df["name"]).str.split().str[0].str.upper(),
             name=lambda df: df["name"].str.upper(),
             sectorName=lambda df: df["sectorName"].map(sectors),
             Country=lambda df: df["countryCode"].map(lambda c: _map_country_currency(c)[0]),
@@ -158,13 +143,9 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
         })
     )
 
-    return (
-        df.groupby(["etf_ticker", "Ticker", "Name"], as_index=False)
-        .agg({
-            **{c: "first" for c in df.columns if c not in ("etf_ticker", "Ticker", "Name", "Weight (%)")},
-            "Weight (%)": "sum",
-        })
-    )
+    # Aggregate duplicate holdings into a single holding
+    other_cols = {c: "first" for c in df.columns if c not in ("etf_ticker", "Ticker", "Name", "Weight (%)")}
+    return df.groupby(["etf_ticker", "Ticker", "Name"], as_index=False).agg({**other_cols, "Weight (%)": "sum"})
 
 
 """Database Functions"""
@@ -265,8 +246,8 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            #"betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            #"ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
             "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         
