@@ -1,10 +1,12 @@
 {
   "betashares_aus": [
     { "ticker": "A200" },
+    { "ticker": "ASIA" },
     { "ticker": "BGBL" },
+    { "ticker": "HACK" },
     { "ticker": "NDQ" }
   ],
-  "global_x_aus": [
+  "globalx_aus": [
     { "ticker": "GOLD" },
     { "ticker": "SEMI" },
     { "ticker": "TECH" }

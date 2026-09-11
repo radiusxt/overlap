@@ -47,7 +47,7 @@ def _split_blocks(text: str) -> list[str]:
     start_idxs.append(len(lines))
     return ["\n".join(lines[start:end]) for start, end in zip(start_idxs, start_idxs[1:])]
 
-# Map an ISO 3166-1 alpha-2 code (e.g. 'US', 'JP') to (Country name, Currency)
+# Map an ISO 3166-1 alpha-2 code ('AU') to (Country name, Currency)
 # Returns (None, None) for missing/unrecognised codes
 @lru_cache(maxsize=None)
 def _map_country_currency(country_code: str | None) -> tuple[str | None, str | None]:
@@ -71,7 +71,7 @@ def _map_country_currency(country_code: str | None) -> tuple[str | None, str | N
     return name, currency
 
 
-"""Data Fetching"""
+"""ASX Data Fetching"""
 
 # Fetch holdings for a single BetaShares ASX listed ETF
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
@@ -91,7 +91,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     )
 
 # Fetch holdings for a single Global X ASX listed ETF
-def fetch_holdings_global_x_aus(ticker: str) -> pd.DataFrame:
+def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
     pass
 
 # Fetch holdings for a single BlackRock ASX listed ETF
@@ -119,7 +119,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 # Fetch holdings for a single Vanguard ASX listed ETF
 def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
-   
+
     response = requests.get(url, params={"limit": 1500}, headers=HEADERS, timeout=15)
     response.raise_for_status()
     items = response.json().get("data", {}).get("items", [])
@@ -247,6 +247,7 @@ if __name__ == "__main__":
     try:
         ISSUERS_AUS = {
             "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            #"globalx": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
             "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
             "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
