@@ -38,7 +38,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
 # Fetch holdings for a single Global X ASX listed ETF
 def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
-   # Find the latest weekday for workflow_dispatch
+   # Find the latest weekday for manual running with workflow_dispatch
    now = datetime.datetime.now()
    weekday = (now - datetime.timedelta(days=max(0, now.weekday() - 4))).strftime('%Y%m%d')
    url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
