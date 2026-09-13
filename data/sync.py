@@ -57,7 +57,6 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
         .rename(columns={
             "Component Name": "Name",
             "Local CCY": "Currency",
-            "weight": "Weight (%)",
         })
     )
 
@@ -210,10 +209,10 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            "globalx": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
-            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-            "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
+            "Betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "Global X": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
+            "iShares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            "Vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         
         # Fetch data for ASX listed ETFs

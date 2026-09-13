@@ -10,6 +10,9 @@
 
 # testing
 /coverage
+*.csv
+*.png
+*.xlsx
 
 # next.js
 /.next/
@@ -20,10 +23,7 @@
 
 # misc
 .DS_Store
-*.csv
 *.pem
-*.png
-*.xlsx
 
 # debug
 npm-debug.log*
