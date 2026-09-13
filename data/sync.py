@@ -1,78 +1,20 @@
+"""Python Script to Sync Database"""
+
 import datetime
 import io
-import json
 import os
 import pandas as pd
 import psycopg
-import pycountry
 import requests
 import time
 import warnings
 
-from babel.numbers import get_territory_currencies
 from dotenv import load_dotenv
-from functools import lru_cache
-from pathlib import Path
+from utils import HEADERS, sectors, _load_etfs, _split_blocks, _map_country_currency
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
 warnings.filterwarnings("ignore", message="Unknown extension is not supported and will be removed")
-
-
-"""Utils"""
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-}
-
-# Load a mapping of GICS subindustries to GICS industries
-# Reference: https://www.msci.com/indexes/index-resources/gics
-with open(Path(__file__).parent / "gics.json") as f:
-    sectors = json.load(f)
-
-# Load ETFs sequentially in order grouped by fund issuer
-def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
-    with open(Path(__file__).parent / "etfs.json") as f:
-        config = json.load(f)
-
-    tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
-    return tickers, fetch
-
-# Split a raw CSV into one chunk per 'Fund Holdings as of' section
-# This is for feeder iShares funds that publish a second section with underlying holdings
-def _split_blocks(text: str) -> list[str]:
-    lines = text.splitlines()
-    start_idxs = [
-        i for i, line in enumerate(lines)
-        if line.lstrip("\ufeff").strip().startswith("Fund Holdings as of")
-    ]
-    start_idxs.append(len(lines))
-    return ["\n".join(lines[start:end]) for start, end in zip(start_idxs, start_idxs[1:])]
-
-# Map an ISO 3166-1 alpha-2 code ('AU') to (Country name, Currency)
-# Returns (None, None) for missing/unrecognised codes
-# This is for Vanguard funds for not listing country nor currency
-@lru_cache(maxsize=None)
-def _map_country_currency(country_code: str | None) -> tuple[str | None, str | None]:
-    if not isinstance(country_code, str) or not country_code.strip():
-        return None, None
-
-    try:
-        country = pycountry.countries.get(alpha_2=country_code)
-
-    except LookupError:
-        country = None
-
-    name = (getattr(country, "common_name", None) or getattr(country, "name", None)) if country else None
-
-    try:
-        currency = get_territory_currencies(country_code, tender=True, non_tender=False)[0]
-
-    except (LookupError, IndexError):
-        currency = None
-
-    return name, currency
 
 
 """ASX Data Fetching"""
@@ -96,7 +38,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
 # Fetch holdings for a single Global X ASX listed ETF
 def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
-   # Find the latest weekday
+   # Find the latest weekday for workflow_dispatch
    now = datetime.datetime.now()
    weekday = (now - datetime.timedelta(days=max(0, now.weekday() - 4))).strftime('%Y%m%d')
    url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
@@ -268,10 +210,10 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            #"betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
             "globalx": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
-            #"ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-            #"vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
+            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         
         # Fetch data for ASX listed ETFs
