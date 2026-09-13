@@ -1,3 +1,4 @@
+import datetime
 import io
 import json
 import os
@@ -6,6 +7,7 @@ import psycopg
 import pycountry
 import requests
 import time
+import warnings
 
 from babel.numbers import get_territory_currencies
 from dotenv import load_dotenv
@@ -14,6 +16,7 @@ from pathlib import Path
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
+warnings.filterwarnings("ignore", message="Unknown extension is not supported and will be removed")
 
 
 """Utils"""
@@ -49,6 +52,7 @@ def _split_blocks(text: str) -> list[str]:
 
 # Map an ISO 3166-1 alpha-2 code ('AU') to (Country name, Currency)
 # Returns (None, None) for missing/unrecognised codes
+# This is for Vanguard funds for not listing country nor currency
 @lru_cache(maxsize=None)
 def _map_country_currency(country_code: str | None) -> tuple[str | None, str | None]:
     if not isinstance(country_code, str) or not country_code.strip():
@@ -92,7 +96,28 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
 
 # Fetch holdings for a single Global X ASX listed ETF
 def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
-    pass
+   # Find the latest weekday
+   now = datetime.datetime.now()
+   weekday = (now - datetime.timedelta(days=max(0, now.weekday() - 4))).strftime('%Y%m%d')
+   url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
+
+   response = requests.get(url, headers=HEADERS, timeout=15)
+   response.raise_for_status()
+
+   return (
+        pd.read_excel(io.BytesIO(response.content), skiprows=18, engine="openpyxl")
+        .dropna(subset=["ISIN"])
+        .assign(
+            etf_ticker=ticker,
+            holding_ticker=lambda df: df["Bloomberg Ticker"].str.split().str[0],
+            weight=lambda df: df["Weight"] * 100,
+        )
+        .rename(columns={
+            "Component Name": "Name",
+            "Local CCY": "Currency",
+            "weight": "Weight (%)",
+        })
+    )
 
 # Fetch holdings for a single BlackRock ASX listed ETF
 def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestamp: str) -> pd.DataFrame:
@@ -129,16 +154,13 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
         .dropna(subset=["name"])
         .assign(
             etf_ticker=ticker,
-            ticker=lambda df: df["ticker"].fillna(df["name"]).str.split().str[0].str.upper(),
-            name=lambda df: df["name"].str.upper(),
-            sectorName=lambda df: df["sectorName"].map(sectors),
+            Ticker=lambda df: df["ticker"].fillna(df["name"]).str.split().str[0].str.upper(),
+            Name=lambda df: df["name"].str.upper(),
+            Sector=lambda df: df["sectorName"].map(sectors),
             Country=lambda df: df["countryCode"].map(lambda c: _map_country_currency(c)[0]),
             Currency=lambda df: df["countryCode"].map(lambda c: _map_country_currency(c)[1]),
         )
         .rename(columns={
-            "ticker": "Ticker",
-            "name": "Name",
-            "sectorName": "Sector",
             "marketValPercent": "Weight (%)",
         })
     )
@@ -164,8 +186,8 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
             "Weight (%)": "weight",
         })
         [cols]
-        .assign(weight=lambda d: d["weight"].round(6))
-        .loc[lambda d: d["sector"].notna() & d["country"].notna() & (d["weight"] > 0)]
+        .assign(weight=lambda df: df["weight"].round(6))
+        .loc[lambda df: df["sector"].notna() & df["country"].notna() & (df["weight"] > 0)]
         .where(pd.notnull, None)
     )
 
@@ -246,10 +268,10 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            "betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            #"globalx": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
-            "ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-            "vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
+            #"betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
+            "globalx": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
+            #"ishares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
+            #"vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
         }
         
         # Fetch data for ASX listed ETFs

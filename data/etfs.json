@@ -7,9 +7,9 @@
     { "ticker": "NDQ" }
   ],
   "globalx_aus": [
-    { "ticker": "GOLD" },
-    { "ticker": "SEMI" },
-    { "ticker": "TECH" }
+    
+    { "ticker": "SEMI" }
+    
   ],
   "ishares_aus": [
     {
