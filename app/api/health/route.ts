@@ -6,7 +6,7 @@ export async function GET() {
     const result = await sql `SELECT count(*) FROM etf_holdings`
 
     return NextResponse.json({
-      status: "ok",
+      status: 200,
       holdings_count: result[0].count,
       timestamp: new Date().toISOString(),
     })

@@ -115,6 +115,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 """Database Functions"""
 
 # Standardise column headers for database, drop invalid rows and use at most 6 decimal places
+# Include hedging if the fund is hedged
 def normalize(df: pd.DataFrame, hedged: bool) -> pd.DataFrame:
     cols = ["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]
 
@@ -151,11 +152,12 @@ def upsert(df: pd.DataFrame):
             count = sizes.get(etf_ticker, 0)
             floor = threshold * count
 
-            # Skip if fetch is partial to prevent major database overwrite
+            # Skip if fetch is partial to prevent major overwrites
             if len(group) < floor:
                 print(f"Skipping {etf_ticker}: only fetched {len(group)} / {floor} holdings.")
                 continue
 
+            # Insert rows grouped by etf_ticker
             cur.execute(
                 """
                 insert into etf_holdings
@@ -196,7 +198,10 @@ def upsert(df: pd.DataFrame):
                         and keep.holding_name = etf_holdings.holding_name
                 )
                 """,
-                (etf_ticker, group["holding_ticker"].tolist(), group["holding_name"].tolist()),
+                (
+                    etf_ticker, group["holding_ticker"].tolist(),
+                    group["holding_name"].tolist()
+                ),
             )
 
             if cur.rowcount:
