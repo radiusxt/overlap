@@ -1,45 +1,84 @@
 {
   "betashares_aus": [
-    { "ticker": "A200" },
-    { "ticker": "ASIA" },
-    { "ticker": "BGBL" },
-    { "ticker": "HACK" },
-    { "ticker": "NDQ" }
+    {
+      "ticker": "A200",
+      "hedged": false
+    },
+    {
+      "ticker": "ASIA",
+      "hedged": false
+    },
+    {
+      "ticker": "BGBL",
+      "hedged": false
+    },
+    {
+      "ticker": "HACK",
+      "hedged": false
+    },
+    {
+      "ticker": "NDQ",
+      "hedged": false
+    }
   ],
   "globalx_aus": [
-    { "ticker": "ACDC" },
-    { "ticker": "FANG" },
-    { "ticker": "SEMI" },
-    { "ticker": "TECH" }
+    {
+      "ticker": "ACDC",
+      "hedged": false
+    },
+    {
+      "ticker": "FANG",
+      "hedged": false
+    },
+    {
+      "ticker": "SEMI",
+      "hedged": false
+    },
+    {
+      "ticker": "TECH",
+      "hedged": false
+    }
   ],
   "ishares_aus": [
     {
       "ticker": "IAA",
       "product_id": "273416",
       "slug": "fund",
-      "timestamp": "1478358644060"
+      "timestamp": "1478358644060",
+      "hedged": false
+    },
+    {
+      "ticker": "IHVV",
+      "product_id": "271027",
+      "slug": "fund",
+      "timestamp": "1478358644060",
+      "hedged": true
     },
     {
       "ticker": "IOZ",
       "product_id": "251852",
       "slug": "ishares-core-s-p-asx-200-etf",
-      "timestamp": "1478358644060"
+      "timestamp": "1478358644060",
+      "hedged": false
     },
     {
       "ticker": "IVV",
       "product_id": "275304",
       "slug": "fund",
-      "timestamp": "1478358644060"
+      "timestamp": "1478358644060",
+      "hedged": false
     }
   ],
   "vanguard_aus": [
     {
       "ticker": "VAS",
-      "product_id": "8205"
+      "product_id": "8205",
+      "hedged": false
     },
     {
       "ticker": "VGS",
-      "product_id": "8212"
+      "product_id": "8212",
+      "hedged": false
     }
   ]
 }

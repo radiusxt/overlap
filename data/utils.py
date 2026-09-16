@@ -7,6 +7,7 @@ from babel.numbers import get_territory_currencies
 from functools import lru_cache
 from pathlib import Path
 
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",

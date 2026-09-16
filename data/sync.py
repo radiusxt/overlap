@@ -78,8 +78,8 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         .rename(columns={"Market Currency": "Currency"})
         .assign(
             etf_ticker=ticker,
-            Sector=lambda df: df["Sector"].replace({"Communication": "Communication Services"}),
-            Country=lambda df: df["Location"],
+            Sector=lambda df: df["Sector"].replace({ "Communication": "Communication Services" }),
+            country=lambda df: df["Location"],
         )
     )
 
@@ -115,7 +115,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 """Database Functions"""
 
 # Standardise column headers for database, drop invalid rows and use at most 6 decimal places
-def normalize(df: pd.DataFrame) -> pd.DataFrame:
+def normalize(df: pd.DataFrame, hedged: bool) -> pd.DataFrame:
     cols = ["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]
 
     return (
@@ -128,7 +128,10 @@ def normalize(df: pd.DataFrame) -> pd.DataFrame:
             "Weight (%)": "weight",
         })
         [cols]
-        .assign(weight=lambda df: df["weight"].round(6))
+        .assign(
+            currency=lambda df: "AUD" if hedged else df["currency"],
+            weight=lambda df: df["weight"].round(6)
+        )
         .loc[lambda df: df["sector"].notna() & df["country"].notna() & (df["weight"] > 0)]
         .where(pd.notnull, None)
     )
@@ -210,17 +213,18 @@ if __name__ == "__main__":
 
     try:
         ISSUERS_AUS = {
-            "Betashares": _load_etfs("betashares_aus", ["ticker"], fetch_holdings_betashares_aus),
-            "Global X": _load_etfs("globalx_aus", ["ticker"], fetch_holdings_globalx_aus),
-            "iShares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp"], fetch_holdings_ishares_aus),
-            "Vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id"], fetch_holdings_vanguard_aus),
+            "Betashares": _load_etfs("betashares_aus", ["ticker", "hedged"], fetch_holdings_betashares_aus),
+            "Global X": _load_etfs("globalx_aus", ["ticker", "hedged"], fetch_holdings_globalx_aus),
+            "iShares": _load_etfs("ishares_aus", ["ticker", "product_id", "slug", "timestamp", "hedged"], fetch_holdings_ishares_aus),
+            "Vanguard": _load_etfs("vanguard_aus", ["ticker", "product_id", "hedged"], fetch_holdings_vanguard_aus),
         }
         
         # Fetch data for ASX listed ETFs
         for name, (tickers, fetch) in ISSUERS_AUS.items():
             for ticker in tickers:
                 try:
-                    upsert(normalize(fetch(*ticker)))
+                    *args, hedged = ticker
+                    upsert(normalize(fetch(*args), hedged))
                     print(f"Successfully downloaded ASX: {ticker[0]} from {name}.\n")
 
                 except Exception as e:
