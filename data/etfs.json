@@ -7,6 +7,8 @@
     { "ticker": "NDQ" }
   ],
   "globalx_aus": [
+    { "ticker": "ACDC" },
+    { "ticker": "FANG" },
     { "ticker": "SEMI" },
     { "ticker": "TECH" }
   ],

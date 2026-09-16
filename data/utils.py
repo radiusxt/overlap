@@ -38,7 +38,7 @@ def _split_blocks(text: str) -> list[str]:
 
 # Map an ISO 3166-1 alpha-2 code ('AU') to (Country name, Currency)
 # Returns (None, None) for missing/unrecognised codes
-# This is for Vanguard funds for not listing country nor currency
+# This is for Vanguard funds for not listing country nor currency in csv
 @lru_cache(maxsize=None)
 def _map_country_currency(country_code: str | None) -> tuple[str | None, str | None]:
     if not isinstance(country_code, str) or not country_code.strip():

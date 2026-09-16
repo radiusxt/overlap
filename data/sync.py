@@ -32,15 +32,16 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
         .assign(
             etf_ticker=ticker,
             Ticker=lambda df: df["Ticker"].str.split().str[0],
-            Sector=lambda df: df["Sector"].replace({"Healthcare": "Health Care"}),
+            Sector=lambda df: df["Sector"].replace({ "Healthcare": "Health Care" }),
         )
     )
 
 # Fetch holdings for a single Global X ASX listed ETF
 def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
-   # Find the latest weekday for manual running with workflow_dispatch
-   now = datetime.datetime.now()
-   weekday = (now - datetime.timedelta(days=max(0, now.weekday() - 4))).strftime('%Y%m%d')
+   # Find the latest weekday excluding today for manual running with workflow_dispatch
+   yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+   weekday = (yesterday - datetime.timedelta(days=max(0, yesterday.weekday() - 4))).strftime('%Y%m%d')
+
    url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
 
    response = requests.get(url, headers=HEADERS, timeout=15)
@@ -55,8 +56,8 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
             weight=lambda df: df["Weight"] * 100,
         )
         .rename(columns={
-            "Component Name": "Name",
-            "Local CCY": "Currency",
+            "Component Name": "holding_name",
+            "Local CCY": "currency",
         })
     )
 
