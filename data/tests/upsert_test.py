@@ -20,10 +20,11 @@ def _holdings(rows):
     return pd.DataFrame(rows, columns=COLUMNS)
 
 def _fetch_all():
-    with psycopg.connect(os.environ["SUPABASE_DB_URL"]) as conn:
-        cur = conn.execute(
+    with psycopg.connect(os.environ["SUPABASE_DB_URL"]) as connection:
+        cur = connection.execute(
             f"select {', '.join(COLUMNS)} from etf_holdings order by holding_ticker"
         )
+        
         return cur.fetchall()
 
 

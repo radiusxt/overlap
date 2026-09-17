@@ -55,6 +55,20 @@
       "hedged": true
     },
     {
+      "ticker": "IKO",
+      "product_id": "273436",
+      "slug": "fund",
+      "timestamp": "1478358644060",
+      "hedged": false
+    },
+    {
+      "ticker": "IOO",
+      "product_id": "273428",
+      "slug": "ishares-global-100-etf",
+      "timestamp": "1478358644060",
+      "hedged": false
+    },
+    {
       "ticker": "IOZ",
       "product_id": "251852",
       "slug": "ishares-core-s-p-asx-200-etf",
@@ -67,6 +81,13 @@
       "slug": "fund",
       "timestamp": "1478358644060",
       "hedged": false
+    },
+    {
+      "ticker": "IWLD",
+      "product_id": "283117",
+      "slug": "fund",
+      "timestamp": "1478358644060",
+      "hedged": false
     }
   ],
   "vanguard_aus": [
@@ -74,6 +95,11 @@
       "ticker": "VAS",
       "product_id": "8205",
       "hedged": false
+    },
+    {
+      "ticker": "VGAD",
+      "product_id": "8213",
+      "hedged": true
     },
     {
       "ticker": "VGS",

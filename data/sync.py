@@ -1,6 +1,4 @@
 """
-Sync Database
-
 This script is run once a day on weekdays to update each ETF's holdings and weights.
 """
 
@@ -28,7 +26,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     response = _get(url)
 
     return (
-        pd.read_csv(io.StringIO(response.text), skiprows=6)
+        pd.read_csv(io.StringIO(response.text), skiprows=6, keep_default_na=False, na_values=[""])
         .dropna(subset=["Name"])
         .assign(
             etf_ticker=ticker,
@@ -47,7 +45,7 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
    response = _get(url)
 
    return (
-        pd.read_excel(io.BytesIO(response.content), skiprows=18, engine="openpyxl")
+        pd.read_excel(io.BytesIO(response.content), skiprows=18, keep_default_na=False, na_values=[""], engine="openpyxl")
         .dropna(subset=["ISIN"])
         .assign(
             etf_ticker=ticker,
@@ -70,7 +68,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
     response = _get(url)
 
     return (
-        pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2)
+        pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2, keep_default_na=False, na_values=[""])
         .dropna(subset=["Name"])
         .assign(
             etf_ticker=ticker,
@@ -111,7 +109,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
 """Database Functions"""
 
 # Standardise column headers for database, drop invalid rows and use at most 6 decimal places
-# Include hedging if the fund is hedged
+# Include hedging if the fund has currency hedging
 def normalize(df: pd.DataFrame, hedged: bool) -> pd.DataFrame:
     cols = ["etf_ticker", "holding_ticker", "holding_name", "sector", "country", "currency", "weight"]
 
