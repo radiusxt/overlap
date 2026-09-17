@@ -1,4 +1,8 @@
-"""Python Script to Sync Database"""
+"""
+Sync Database
+
+This script is run once a day on weekdays to update each ETF's holdings and weights.
+"""
 
 import datetime
 import io
@@ -38,8 +42,8 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
    # Find the latest weekday excluding today for manual running with workflow_dispatch
    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
    weekday = (yesterday - datetime.timedelta(days=max(0, yesterday.weekday() - 4))).strftime('%Y%m%d')
-
    url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
+
    response = _get(url)
 
    return (

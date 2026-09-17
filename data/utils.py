@@ -1,4 +1,6 @@
-"""Utility File for sync.py"""
+"""
+Utility File for sync.py
+"""
 
 import json
 import pycountry
