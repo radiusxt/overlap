@@ -2,8 +2,8 @@ name: Database Sync
 
 on:
   schedule:
-    # Triggers on weekdays at 20:22 UTC / 16:22 UTC-4 (NYC) / 06:22 UTC+10 (BNE)
-    - cron: "22 20 * * 1-5"
+    # Triggers on weekdays at 20:13 UTC / 16:13 UTC-4 (NYC) / 06:13 UTC+10 (BNE)
+    - cron: "13 20 * * 1-5"
   # Can be manually triggered for testing purposes or urgent updates
   workflow_dispatch:
 

@@ -2,6 +2,7 @@
 
 import json
 import pycountry
+import requests
 
 from babel.numbers import get_territory_currencies
 from functools import lru_cache
@@ -18,6 +19,7 @@ HEADERS = {
 with open(Path(__file__).parent / "gics.json") as f:
     sectors = json.load(f)
 
+
 # Load ETFs sequentially in order grouped by fund issuer
 def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], callable]:
     with open(Path(__file__).parent / "etfs.json") as f:
@@ -25,6 +27,13 @@ def _load_etfs(issuer_key: str, fields: list[str], fetch) -> tuple[list[tuple], 
 
     tickers = [tuple(entry[field] for field in fields) for entry in config[issuer_key]]
     return tickers, fetch
+
+
+def _get(url: str, **kwargs) -> requests.Response:
+    response = requests.get(url, headers=HEADERS, timeout=15, **kwargs)
+    response.raise_for_status()
+    return response
+
 
 # Split a raw CSV into one chunk per 'Fund Holdings as of' section
 # This is for feeder iShares funds that publish a second section with underlying holdings
@@ -36,6 +45,7 @@ def _split_blocks(text: str) -> list[str]:
     ]
     start_idxs.append(len(lines))
     return ["\n".join(lines[start:end]) for start, end in zip(start_idxs, start_idxs[1:])]
+
 
 # Map an ISO 3166-1 alpha-2 code ('AU') to (Country name, Currency)
 # Returns (None, None) for missing/unrecognised codes

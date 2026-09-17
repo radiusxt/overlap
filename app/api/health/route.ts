@@ -9,11 +9,11 @@ export async function GET() {
       status: 200,
       holdings_count: result[0].count,
       timestamp: new Date().toISOString(),
-    })
+    });
   } catch (error) {
     return NextResponse.json(
       { status: "error", message: (error as Error).message },
       { status: 500 }
-    )
+    );
   }
 }

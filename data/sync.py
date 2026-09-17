@@ -5,12 +5,11 @@ import io
 import os
 import pandas as pd
 import psycopg
-import requests
 import time
 import warnings
 
 from dotenv import load_dotenv
-from utils import HEADERS, sectors, _load_etfs, _split_blocks, _map_country_currency
+from utils import sectors, _load_etfs, _get, _split_blocks, _map_country_currency
 
 load_dotenv(".env.local")
 DB_URL = os.environ["SUPABASE_DB_URL"]
@@ -22,9 +21,7 @@ warnings.filterwarnings("ignore", message="Unknown extension is not supported an
 # Fetch holdings for a single BetaShares ASX listed ETF
 def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
     url = f"https://www.betashares.com.au/files/csv/{ticker}_Portfolio_Holdings.csv"
-
-    response = requests.get(url, headers=HEADERS, timeout=15)
-    response.raise_for_status()
+    response = _get(url)
 
     return (
         pd.read_csv(io.StringIO(response.text), skiprows=6)
@@ -43,21 +40,19 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
    weekday = (yesterday - datetime.timedelta(days=max(0, yesterday.weekday() - 4))).strftime('%Y%m%d')
 
    url = f"https://files.globalxetfs.com.au/GXAU_{ticker}_FULL_PCF_{weekday}.xlsx"
-
-   response = requests.get(url, headers=HEADERS, timeout=15)
-   response.raise_for_status()
+   response = _get(url)
 
    return (
         pd.read_excel(io.BytesIO(response.content), skiprows=18, engine="openpyxl")
         .dropna(subset=["ISIN"])
         .assign(
             etf_ticker=ticker,
-            holding_ticker=lambda df: df["Bloomberg Ticker"].str.split().str[0],
+            Ticker=lambda df: df["Bloomberg Ticker"].str.split().str[0],
             weight=lambda df: df["Weight"] * 100,
         )
         .rename(columns={
-            "Component Name": "holding_name",
-            "Local CCY": "currency",
+            "Component Name": "Name",
+            "Local CCY": "Currency",
         })
     )
 
@@ -68,18 +63,16 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         f".ajax?fileType=csv&fileName={ticker}_holdings&dataType=fund"
     )
 
-    response = requests.get(url, headers=HEADERS, timeout=15)
-    response.raise_for_status()
+    response = _get(url)
 
     return (
         pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2)
         .dropna(subset=["Name"])
-        .drop(columns=["Currency"])
-        .rename(columns={"Market Currency": "Currency"})
         .assign(
             etf_ticker=ticker,
             Sector=lambda df: df["Sector"].replace({ "Communication": "Communication Services" }),
-            country=lambda df: df["Location"],
+            Country=lambda df: df["Location"],
+            Currency=lambda df: df["Market Currency"]
         )
     )
 
@@ -87,8 +80,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
 def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
     url = f"https://www.vanguard.com.au/personal/api/data/products/holdings/{product_id}"
 
-    response = requests.get(url, params={"limit": 1500}, headers=HEADERS, timeout=15)
-    response.raise_for_status()
+    response = _get(url, params={"limit": 1500})
     items = response.json().get("data", {}).get("items", [])
 
     df = (
@@ -194,8 +186,8 @@ def upsert(df: pd.DataFrame):
                 where etf_ticker = %s and not exists (
                     select 1
                     from unnest(%s::text[], %s::text[]) as keep(holding_ticker, holding_name)
-                    where keep.holding_ticker = etf_holdings.holding_ticker
-                        and keep.holding_name = etf_holdings.holding_name
+                    where keep.holding_ticker = etf_holdings.holding_ticker and
+                        keep.holding_name = etf_holdings.holding_name
                 )
                 """,
                 (
