@@ -1,5 +1,5 @@
 """
-Unit tests for the helper functions in utils.py
+Unit tests for the helper functions in utils.py.
 """
 
 from utils import _map_country_currency, _split_blocks

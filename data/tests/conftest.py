@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for the sync.py / utils.py test suite.
+Shared pytest fixtures for testing suite.
 """
 
 import os
@@ -29,8 +29,7 @@ def _assert_safe_test_db(url: str) -> None:
             "running pytest and don't rely on .env.local."
         )
 
-# Mirrors the real public.etf_holdings schema (pulled from Supabase directly
-# so this stays honest) — update if the production schema changes.
+# Mirrors the real public.etf_holdings schema
 CREATE_TABLE_SQL = """
 create table if not exists public.etf_holdings (
     id bigint generated always as identity primary key,
