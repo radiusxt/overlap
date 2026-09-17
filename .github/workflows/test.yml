@@ -37,5 +37,5 @@ jobs:
           cache-dependency-path: "data/requirements.txt"
       - run: pip install -r data/requirements.txt
       - working-directory: data
-        run: pytest -v
+        run: python -m pytest -v
  
