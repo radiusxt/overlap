@@ -21,7 +21,7 @@ View on desktop for the best experience.
 - PostgreSQL
 - Python
 - TypeScript
-- Yahoo Finance
+- Yahoo Finance API
 
 **Deployment**
 

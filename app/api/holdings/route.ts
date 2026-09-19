@@ -34,7 +34,9 @@ interface Row {
 
 function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) {
   // Find value of each position and total portfolio value
-  const values = portfolio.map(position => position.shares * prices.get(position.ticker)!);
+  const values = portfolio.map(position =>
+    position.shares * prices.get(position.ticker)!
+  );
   const totalValue = values.reduce((sum, value) => sum + value, 0);
 
   if (totalValue === 0) {
@@ -46,8 +48,8 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
   );
 
   const aggregated = holdings.reduce((acc, h) => {
-    const portfolioWeight = weightByTicker.get(h.etf_ticker) ?? 0;
-    const contributionPct = portfolioWeight * h.weight;
+    // Retrieve the portfolio contribution of a holding
+    const contributionPct = (weightByTicker.get(h.etf_ticker) ?? 0) * h.weight;
     const existing = acc.get(h.holding_ticker);
 
     if (existing) {
@@ -84,12 +86,14 @@ export async function POST(request: Request) {
 
     const yf = new YahooFinance();
     const quotes = await Promise.all(tickers.map(ticker => yf.quote(ticker)));
-    const prices = new Map(tickers.map((ticker, i) => [ticker, quotes[i].regularMarketPrice]));
+    const prices = new Map(tickers.map((ticker, i) =>
+      [ticker, quotes[i].regularMarketPrice])
+    );
 
     const missing = tickers.filter(ticker => !prices.get(ticker));
     
     if (missing.length > 0) {
-      throw new Error(`No price available for: ${missing.join(", ")}`);
+      throw new Error(`No pricing data available for: ${missing.join(", ")}`);
     }
 
     const topHoldings = getTopHoldings({ portfolio, prices, holdings });
@@ -103,7 +107,8 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json({
       message: (error as Error).message
-    }, {
+    },
+    {
       status: 500
     });
   }
