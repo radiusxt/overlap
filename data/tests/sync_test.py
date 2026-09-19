@@ -86,7 +86,7 @@ def test_fetch_betashares_strips_ticker_suffix_and_remaps_sector(monkeypatch, fa
     assert len(df) == 1
     assert df["Ticker"].iloc[0] == "BHP"
     assert df["Sector"].iloc[0] == "Health Care"
-    assert df["etf_ticker"].iloc[0] == "A200"
+    assert df["etf_ticker"].iloc[0] == "A200.AX"
 
 
 # --- fetch_holdings_globalx_aus() -----------------------------------------
