@@ -29,7 +29,7 @@ def fetch_holdings_betashares_aus(ticker: str) -> pd.DataFrame:
         pd.read_csv(io.StringIO(response.text), skiprows=6, keep_default_na=False, na_values=[""])
         .dropna(subset=["Name"])
         .assign(
-            etf_ticker=ticker,
+            etf_ticker=ticker + ".AX",
             Ticker=lambda df: df["Ticker"].str.split().str[0],
             Sector=lambda df: df["Sector"].replace({ "Healthcare": "Health Care" }),
         )
@@ -48,7 +48,7 @@ def fetch_holdings_globalx_aus(ticker: str) -> pd.DataFrame:
         pd.read_excel(io.BytesIO(response.content), skiprows=18, keep_default_na=False, na_values=[""], engine="openpyxl")
         .dropna(subset=["ISIN"])
         .assign(
-            etf_ticker=ticker,
+            etf_ticker=ticker + ".AX",
             Ticker=lambda df: df["Bloomberg Ticker"].str.split().str[0],
             weight=lambda df: df["Weight"] * 100,
         )
@@ -71,7 +71,7 @@ def fetch_holdings_ishares_aus(ticker: str, product_id: str, slug: str, timestam
         pd.read_csv(io.StringIO(_split_blocks(response.text)[-1]), skiprows=2, keep_default_na=False, na_values=[""])
         .dropna(subset=["Name"])
         .assign(
-            etf_ticker=ticker,
+            etf_ticker=ticker + ".AX",
             Sector=lambda df: df["Sector"].replace({ "Communication": "Communication Services" }),
             Country=lambda df: df["Location"],
             Currency=lambda df: df["Market Currency"]
@@ -89,7 +89,7 @@ def fetch_holdings_vanguard_aus(ticker: str, product_id: str) -> pd.DataFrame:
         pd.DataFrame(items)
         .dropna(subset=["name"])
         .assign(
-            etf_ticker=ticker,
+            etf_ticker=ticker + ".AX",
             Ticker=lambda df: df["ticker"].fillna(df["name"]).str.split().str[0].str.upper(),
             Name=lambda df: df["name"].str.upper(),
             Sector=lambda df: df["sectorName"].map(sectors),
@@ -224,10 +224,10 @@ if __name__ == "__main__":
                 try:
                     *args, hedged = ticker
                     upsert(normalize(fetch(*args), hedged))
-                    print(f"Successfully downloaded ASX: {ticker[0]} from {name}.\n")
+                    print(f"Successfully downloaded {ticker[0]}.AX from {name}.\n")
 
                 except Exception as e:
-                    print(f"Failed to download ASX: {ticker[0]} from {name}: {e}\n")
+                    print(f"Failed to download {ticker[0]}.AX from {name}: {e}\n")
 
     finally:
         elapsed = time.perf_counter() - start

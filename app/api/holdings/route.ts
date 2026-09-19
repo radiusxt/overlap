@@ -32,7 +32,6 @@ interface Row {
   weight: number;
 }
 
-
 function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) {
   // Find value of each position and total portfolio value
   const values = portfolio.map(position => position.shares * prices.get(position.ticker)!);
@@ -85,7 +84,7 @@ export async function POST(request: Request) {
 
     const yf = new YahooFinance();
     const quotes = await Promise.all(tickers.map(ticker => yf.quote(ticker)));
-    const prices = new Map(quotes.map(quote => [quote.symbol, quote.regularMarketPrice]));
+    const prices = new Map(tickers.map((ticker, i) => [ticker, quotes[i].regularMarketPrice]));
 
     const missing = tickers.filter(ticker => !prices.get(ticker));
     
