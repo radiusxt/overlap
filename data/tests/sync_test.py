@@ -79,8 +79,8 @@ def test_fetch_betashares_strips_ticker_suffix_and_remaps_sector(monkeypatch, fa
         "BHP AT,BHP GROUP,Healthcare,Australia,AUD,5.0\n"
         "CASH999,,Other,Australia,AUD,1.0\n"  # blank Name -> dropped
     )
-    monkeypatch.setattr(sync, "_get", lambda url: fake_response(text=csv))
 
+    monkeypatch.setattr(sync, "_get", lambda url: fake_response(text=csv))
     df = sync.fetch_holdings_betashares_aus("A200")
 
     assert len(df) == 1
@@ -93,8 +93,10 @@ def test_fetch_betashares_strips_ticker_suffix_and_remaps_sector(monkeypatch, fa
 
 def _globalx_xlsx(rows: dict) -> bytes:
     buf = io.BytesIO()
+
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         pd.DataFrame(rows).to_excel(writer, index=False, startrow=18)
+
     return buf.getvalue()
 
 
@@ -108,8 +110,8 @@ def test_fetch_globalx_converts_weight_and_splits_ticker(monkeypatch, fake_respo
         "Local CCY": ["AUD"],
         "Weight": [0.05],
     })
-    monkeypatch.setattr(sync, "_get", lambda url: fake_response(content=xlsx_bytes))
 
+    monkeypatch.setattr(sync, "_get", lambda url: fake_response(content=xlsx_bytes))
     df = sync.fetch_holdings_globalx_aus("GHZN")
 
     assert df["Ticker"].iloc[0] == "BHP"
@@ -131,8 +133,8 @@ def test_fetch_ishares_uses_last_block_and_remaps_country_currency(monkeypatch, 
         "Name,Sector,Location,Market Currency,Currency,Weight (%)\n"
         "BHP GROUP LTD,Communication,Australia,AUD,USD,5.0\n"
     )
-    monkeypatch.setattr(sync, "_get", lambda url: fake_response(text=csv_text))
 
+    monkeypatch.setattr(sync, "_get", lambda url: fake_response(text=csv_text))
     df = sync.fetch_holdings_ishares_aus("IVV", "product", "slug", "timestamp")
 
     assert len(df) == 1  # only the underlying-fund block is used
@@ -145,14 +147,15 @@ def test_fetch_ishares_uses_last_block_and_remaps_country_currency(monkeypatch, 
 
 def test_fetch_vanguard_aggregates_duplicates_and_maps_country(monkeypatch, fake_response):
     monkeypatch.setattr(sync, "sectors", {"Metals & Mining": "Materials"})
+
     payload = {"data": {"items": [
         {"ticker": "BHP", "name": "BHP Group", "sectorName": "Metals & Mining",
          "countryCode": "AU", "marketValPercent": 3.0},
         {"ticker": "BHP", "name": "BHP Group", "sectorName": "Metals & Mining",
          "countryCode": "AU", "marketValPercent": 2.0},
     ]}}
-    monkeypatch.setattr(sync, "_get", lambda url, **kw: fake_response(json_data=payload))
 
+    monkeypatch.setattr(sync, "_get", lambda url, **kw: fake_response(json_data=payload))
     df = sync.fetch_holdings_vanguard_aus("VAS", "product-id")
 
     assert len(df) == 1  # duplicate holdings aggregated
@@ -163,12 +166,13 @@ def test_fetch_vanguard_aggregates_duplicates_and_maps_country(monkeypatch, fake
 
 def test_fetch_vanguard_falls_back_to_name_when_ticker_missing(monkeypatch, fake_response):
     monkeypatch.setattr(sync, "sectors", {"Cash": "Cash"})
+
     payload = {"data": {"items": [
         {"ticker": None, "name": "cash and derivatives", "sectorName": "Cash",
          "countryCode": None, "marketValPercent": 1.0},
     ]}}
-    monkeypatch.setattr(sync, "_get", lambda url, **kw: fake_response(json_data=payload))
 
+    monkeypatch.setattr(sync, "_get", lambda url, **kw: fake_response(json_data=payload))
     df = sync.fetch_holdings_vanguard_aus("VAS", "product-id")
 
     assert df["Ticker"].iloc[0] == "CASH"

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/postgres"
+import { sql } from "@/utils/postgres"
 
 export async function GET() {
   try {
@@ -10,10 +10,12 @@ export async function GET() {
       holdings_count: result[0].count,
       timestamp: new Date().toISOString(),
     });
+
   } catch (error) {
-    return NextResponse.json(
-      { status: "error", message: (error as Error).message },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      message: (error as Error).message
+    }, {
+      status: 500
+    });
   }
 }

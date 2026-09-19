@@ -35,6 +35,7 @@ def test_upsert_inserts_new_holdings(db):
     ]))
 
     rows = _fetch_all()
+
     assert len(rows) == 2
     assert rows[0][:2] == ("A200", "BHP")
 
@@ -44,6 +45,7 @@ def test_upsert_updates_existing_holding_on_conflict(db):
     upsert(_holdings([("A200", "BHP", "BHP GROUP", "Materials", "Australia", "AUD", 6.5)]))
 
     rows = _fetch_all()
+
     assert len(rows) == 1        # no duplicate row from the conflict
     assert rows[0][-1] == 6.5    # weight was updated in place
 
@@ -61,6 +63,7 @@ def test_upsert_removes_stale_holdings_on_rebalance(db):
     ]))
 
     tickers = {row[1] for row in _fetch_all()}
+
     assert tickers == {"BHP", "NAB"}
 
 
@@ -77,5 +80,6 @@ def test_upsert_skips_fund_when_fetch_is_too_partial(db, capsys):
     ]))
 
     rows = _fetch_all()
+    
     assert len(rows) == 10  # nothing inserted or deleted — fund was skipped
     assert "Skipping A200" in capsys.readouterr().out
