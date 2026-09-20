@@ -1,6 +1,9 @@
-// Sample portfolios for API testing.
-// These are simple, fixed compositions so expected results
-// can be manually calculated and reused across all tests.
+/**
+ * Sample portfolios for API testing.
+ * 
+ * These are simple, fixed compositions so expected results
+ * can be manually calculated and reused across all tests.
+ */
 
 export interface Position {
   ticker: string;
@@ -15,7 +18,7 @@ export const VAS: Position[] = [
   },
 ];
 
-// Dual ASX ETFs covering 2 distinct regions
+// Dual ASX ETFs with 2 distinct regions
 export const IVV_VAS: Position[] = [
   {
     ticker: "IVV.AX",
@@ -27,7 +30,7 @@ export const IVV_VAS: Position[] = [
   },
 ];
 
-// Dual ASX ETFs covering both hedged and unhedged
+// Dual ASX ETFs with hedging
 export const IHVV_VAS: Position[] = [
   {
     ticker: "IHVV.AX",
@@ -39,7 +42,7 @@ export const IHVV_VAS: Position[] = [
   },
 ];
 
-// A typical ASX portfolio an Australian might have
+// Typical ASX portfolio an Australian might have
 export const IVV_NDQ_VAS: Position[] = [
   {
     ticker: "IVV.AX",
@@ -55,8 +58,7 @@ export const IVV_NDQ_VAS: Position[] = [
   },
 ];
 
-/** Convenience bag for iterating over all four sample portfolios. */
-export const TEST_PORTFOLIOS = {
+export const MOCK_PORTFOLIOS = {
   p1: VAS,
   p2: IVV_VAS,
   p3: IHVV_VAS,

@@ -11,7 +11,7 @@ import pytest
 import sync
 
 
-# --- normalize() -------------------------------------------------------
+# normalize()
 
 def _raw(**overrides):
     base = {
@@ -70,7 +70,7 @@ def test_normalize_drops_zero_weight_rows():
     assert result.empty
 
 
-# --- fetch_holdings_betashares_aus() --------------------------------------
+# fetch_holdings_betashares_aus()
 
 def test_fetch_betashares_strips_ticker_suffix_and_remaps_sector(monkeypatch, fake_response):
     csv = (
@@ -89,7 +89,7 @@ def test_fetch_betashares_strips_ticker_suffix_and_remaps_sector(monkeypatch, fa
     assert df["etf_ticker"].iloc[0] == "A200.AX"
 
 
-# --- fetch_holdings_globalx_aus() -----------------------------------------
+# fetch_holdings_globalx_aus()
 
 def _globalx_xlsx(rows: dict) -> bytes:
     buf = io.BytesIO()
@@ -120,7 +120,7 @@ def test_fetch_globalx_converts_weight_and_splits_ticker(monkeypatch, fake_respo
     assert df["weight"].iloc[0] == pytest.approx(5.0)
 
 
-# --- fetch_holdings_ishares_aus() -----------------------------------------
+# fetch_holdings_ishares_aus()
 
 def test_fetch_ishares_uses_last_block_and_remaps_country_currency(monkeypatch, fake_response):
     csv_text = (
@@ -143,7 +143,7 @@ def test_fetch_ishares_uses_last_block_and_remaps_country_currency(monkeypatch, 
     assert df["Sector"].iloc[0] == "Communication Services"
 
 
-# --- fetch_holdings_vanguard_aus() ----------------------------------------
+# fetch_holdings_vanguard_aus()
 
 def test_fetch_vanguard_aggregates_duplicates_and_maps_country(monkeypatch, fake_response):
     monkeypatch.setattr(sync, "sectors", {"Metals & Mining": "Materials"})

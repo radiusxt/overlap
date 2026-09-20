@@ -156,7 +156,8 @@ def upsert(df: pd.DataFrame):
                 """
                 insert into etf_holdings
                     (etf_ticker, holding_ticker, holding_name, sector, country, currency, weight)
-                select * from unnest(%s::text[], %s::text[], %s::text[], %s::text[], %s::text[], %s::text[], %s::numeric[])
+                select * from unnest(%s::text[], %s::text[], %s::text[],
+                    %s::text[], %s::text[], %s::text[], %s::numeric[])
                 on conflict (etf_ticker, holding_ticker, holding_name)
                 do update set
                     sector = excluded.sector,
@@ -193,7 +194,8 @@ def upsert(df: pd.DataFrame):
                 )
                 """,
                 (
-                    etf_ticker, group["holding_ticker"].tolist(),
+                    etf_ticker,
+                    group["holding_ticker"].tolist(),
                     group["holding_name"].tolist()
                 ),
             )
