@@ -1,19 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { MOCK_PORTFOLIOS, type Position } from "@/tests/fixtures/portfolio.fixtures";
+import { POST } from "@/app/api/holdings/route";
 import { MOCK_HOLDINGS, MOCK_PRICES } from "@/tests/fixtures/db.fixtures";
+import { MOCK_PORTFOLIOS, type Position } from "@/tests/fixtures/portfolio.fixtures";
 
-// --- Mock the DB layer ---------------------------------------------------
-// Adjust this specifier if route.ts's import path differs in your repo.
+// Mock DB 
 vi.mock("@/utils/postgres", () => ({
   sql: vi.fn((_strings: TemplateStringsArray, ...values: unknown[]) => {
     const tickers = values[0] as string[];
-    return Promise.resolve(
-      MOCK_HOLDINGS.filter((h) => tickers.includes(h.etf_ticker))
-    );
+    return Promise.resolve(MOCK_HOLDINGS.filter((h) => tickers.includes(h.etf_ticker)));
   }),
 }));
 
-// --- Mock yahoo-finance2 ---------------------------------------------------
+// Mock Yahoo Finance
 vi.mock("yahoo-finance2", () => ({
   default: vi.fn().mockImplementation(() => ({
     quote: vi.fn(async (ticker: string) => ({
@@ -22,9 +20,10 @@ vi.mock("yahoo-finance2", () => ({
   })),
 }));
 
-// Adjust this relative path to wherever route.ts actually lives in your
-// project (per your project notes, that's app/api/holdings/route.ts).
-import { POST } from "../../app/api/holdings/route";
+interface ExpectedHolding {
+  holding_ticker: string;
+  weight: number; // as a percentage
+}
 
 function buildRequest(portfolio: Position[]): Request {
   return new Request("http://localhost/api/holdings", {
@@ -33,12 +32,7 @@ function buildRequest(portfolio: Position[]): Request {
   });
 }
 
-interface ExpectedHolding {
-  holding_ticker: string;
-  exposure_pct: number;
-}
-
-async function getTopHoldingsFromRoute(portfolio: Position[]) {
+async function getTopHoldings(portfolio: Position[]) {
   const response = await POST(buildRequest(portfolio));
   const body = await response.json();
   return { status: response.status, body };
@@ -46,37 +40,36 @@ async function getTopHoldingsFromRoute(portfolio: Position[]) {
 
 function assertTopHoldings(actual: any[], expected: ExpectedHolding[]) {
   expect(actual).toHaveLength(expected.length);
+
   expected.forEach((exp, i) => {
     expect(actual[i].holding_ticker, `rank ${i + 1}`).toBe(exp.holding_ticker);
-    expect(actual[i].exposure_pct, `${exp.holding_ticker} exposure_pct`).toBeCloseTo(
-      exp.exposure_pct,
-      3
-    );
+    expect(actual[i].weight, `${exp.holding_ticker} pct`).toBeCloseTo(exp.weight, 3);
   });
 }
 
+// Test
 describe("POST /api/holdings", () => {
   // Portfolio 1: 500 x VAS.AX only.
   // totalValue = 500 * 100 = 50,000 -> VAS.AX weight = 1.0
-  // Every VAS holding's exposure_pct = 1.0 * its own weight, i.e. unchanged.
+  // Every VAS holding's weight = 1.0 * its own weight, i.e. unchanged.
   // Price-independent: VAS.AX is the only ETF held, so this portfolio's
   // result doesn't change with the IVV/IHVV/NDQ price update.
   it("portfolio 1 (500 VAS.AX): top holdings equal VAS.AX's own top 10", async () => {
-    const { status, body } = await getTopHoldingsFromRoute(
+    const { status, body } = await getTopHoldings(
       MOCK_PORTFOLIOS.p1
     );
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "CBA", exposure_pct: 10.0 },
-      { holding_ticker: "BHP", exposure_pct: 8.0 },
-      { holding_ticker: "CSL", exposure_pct: 6.0 },
-      { holding_ticker: "NAB", exposure_pct: 5.0 },
-      { holding_ticker: "WBC", exposure_pct: 4.5 },
-      { holding_ticker: "ANZ", exposure_pct: 4.0 },
-      { holding_ticker: "WES", exposure_pct: 3.5 },
-      { holding_ticker: "MQG", exposure_pct: 3.0 },
-      { holding_ticker: "TLS", exposure_pct: 2.5 },
-      { holding_ticker: "WOW", exposure_pct: 2.0 },
+      { holding_ticker: "CBA", weight: 10.0 },
+      { holding_ticker: "BHP", weight: 8.0 },
+      { holding_ticker: "CSL", weight: 6.0 },
+      { holding_ticker: "NAB", weight: 5.0 },
+      { holding_ticker: "WBC", weight: 4.5 },
+      { holding_ticker: "ANZ", weight: 4.0 },
+      { holding_ticker: "WES", weight: 3.5 },
+      { holding_ticker: "MQG", weight: 3.0 },
+      { holding_ticker: "TLS", weight: 2.5 },
+      { holding_ticker: "WOW", weight: 2.0 },
     ]);
   });
 
@@ -87,21 +80,21 @@ describe("POST /api/holdings", () => {
   // None of IVV.AX's ranks 11-15 (AMD, JNJ, XOM, UNH, HD) are big enough,
   // even at 61% portfolio weight, to crack the top 10 here.
   it("portfolio 2 (200 VAS.AX + 450 IVV.AX): blends AU banks with US mega-caps", async () => {
-    const { status, body } = await getTopHoldingsFromRoute(
+    const { status, body } = await getTopHoldings(
       MOCK_PORTFOLIOS.p2
     );
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", exposure_pct: 4.281553 },
-      { holding_ticker: "MSFT", exposure_pct: 3.975728 },
-      { holding_ticker: "CBA", exposure_pct: 3.883495 },
-      { holding_ticker: "NVDA", exposure_pct: 3.669903 },
-      { holding_ticker: "BHP", exposure_pct: 3.106796 },
-      { holding_ticker: "CSL", exposure_pct: 2.330097 },
-      { holding_ticker: "AMZN", exposure_pct: 2.140777 },
-      { holding_ticker: "NAB", exposure_pct: 1.941748 },
-      { holding_ticker: "WBC", exposure_pct: 1.747573 },
-      { holding_ticker: "ANZ", exposure_pct: 1.553398 },
+      { holding_ticker: "AAPL", weight: 4.281553 },
+      { holding_ticker: "MSFT", weight: 3.975728 },
+      { holding_ticker: "CBA", weight: 3.883495 },
+      { holding_ticker: "NVDA", weight: 3.669903 },
+      { holding_ticker: "BHP", weight: 3.106796 },
+      { holding_ticker: "CSL", weight: 2.330097 },
+      { holding_ticker: "AMZN", weight: 2.140777 },
+      { holding_ticker: "NAB", weight: 1.941748 },
+      { holding_ticker: "WBC", weight: 1.747573 },
+      { holding_ticker: "ANZ", weight: 1.553398 },
     ]);
   });
 
@@ -111,21 +104,21 @@ describe("POST /api/holdings", () => {
   // IHVV.AX weight = 26,000/41,000 = 0.634146
   // IHVV.AX shares IVV.AX's constituents (same index, hedged).
   it("portfolio 3 (150 VAS.AX + 400 IHVV.AX): AU-heavier blend via the hedged S&P 500 ETF", async () => {
-    const { status, body } = await getTopHoldingsFromRoute(
+    const { status, body } = await getTopHoldings(
       MOCK_PORTFOLIOS.p3
     );
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", exposure_pct: 4.439024 },
-      { holding_ticker: "MSFT", exposure_pct: 4.121951 },
-      { holding_ticker: "NVDA", exposure_pct: 3.804878 },
-      { holding_ticker: "CBA", exposure_pct: 3.658537 },
-      { holding_ticker: "BHP", exposure_pct: 2.926829 },
-      { holding_ticker: "AMZN", exposure_pct: 2.219512 },
-      { holding_ticker: "CSL", exposure_pct: 2.195122 },
-      { holding_ticker: "NAB", exposure_pct: 1.829268 },
-      { holding_ticker: "WBC", exposure_pct: 1.646341 },
-      { holding_ticker: "ANZ", exposure_pct: 1.463415 },
+      { holding_ticker: "AAPL", weight: 4.439024 },
+      { holding_ticker: "MSFT", weight: 4.121951 },
+      { holding_ticker: "NVDA", weight: 3.804878 },
+      { holding_ticker: "CBA", weight: 3.658537 },
+      { holding_ticker: "BHP", weight: 2.926829 },
+      { holding_ticker: "AMZN", weight: 2.219512 },
+      { holding_ticker: "CSL", weight: 2.195122 },
+      { holding_ticker: "NAB", weight: 1.829268 },
+      { holding_ticker: "WBC", weight: 1.646341 },
+      { holding_ticker: "ANZ", weight: 1.463415 },
     ]);
   });
 
@@ -136,7 +129,7 @@ describe("POST /api/holdings", () => {
   // IVV.AX weight = 35,000/61,500 = 0.569106
   // NDQ.AX and IVV.AX share several mega-cap tech names (AAPL, MSFT, NVDA,
   // AMZN, META, GOOGL, GOOG, AVGO, TSLA, AMD) — this exercises
-  // getTopHoldings' merge branch (existing.exposure_pct += contributionPct).
+  // getTopHoldings' merge branch (existing.weight += contributionPct).
   //
   // Note: AMD (rank 11 in both NDQ.AX and IVV.AX, never top 10 in either
   // individually) sums to ~1.052% here — real, but it lands at rank 12,
@@ -145,22 +138,22 @@ describe("POST /api/holdings", () => {
   // top comment for the full explanation of why the ceiling for a
   // stays-below-both-cutoffs holding (~1.22%) can't quite clear that bar
   // in this specific blend.
-  it("portfolio 4 (100 VAS.AX + 275 NDQ.AX + 500 IVV.AX): merges overlapping tech exposure from NDQ.AX and IVV.AX", async () => {
-    const { status, body } = await getTopHoldingsFromRoute(
+  it("portfolio 4 (100 VAS.AX + 275 NDQ.AX + 500 IVV.AX): merges overlapping tech weight from NDQ.AX and IVV.AX", async () => {
+    const { status, body } = await getTopHoldings(
       MOCK_PORTFOLIOS.p4
     );
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", exposure_pct: 6.264228 }, // 275*60/61500*8.5 + 500*70/61500*7.0
-      { holding_ticker: "MSFT", exposure_pct: 5.845528 },
-      { holding_ticker: "NVDA", exposure_pct: 5.426829 },
-      { holding_ticker: "AMZN", exposure_pct: 3.333333 },
-      { holding_ticker: "META", exposure_pct: 2.077236 },
-      { holding_ticker: "AVGO", exposure_pct: 1.926829 },
-      { holding_ticker: "GOOGL", exposure_pct: 1.889431 },
-      { holding_ticker: "GOOG", exposure_pct: 1.695122 },
-      { holding_ticker: "CBA", exposure_pct: 1.626016 }, // 100*100/61500*10.0
-      { holding_ticker: "TSLA", exposure_pct: 1.524390 },
+      { holding_ticker: "AAPL", weight: 6.264228 }, // 275*60/61500*8.5 + 500*70/61500*7.0
+      { holding_ticker: "MSFT", weight: 5.845528 },
+      { holding_ticker: "NVDA", weight: 5.426829 },
+      { holding_ticker: "AMZN", weight: 3.333333 },
+      { holding_ticker: "META", weight: 2.077236 },
+      { holding_ticker: "AVGO", weight: 1.926829 },
+      { holding_ticker: "GOOGL", weight: 1.889431 },
+      { holding_ticker: "GOOG", weight: 1.695122 },
+      { holding_ticker: "CBA", weight: 1.626016 }, // 100*100/61500*10.0
+      { holding_ticker: "TSLA", weight: 1.524390 },
     ]);
   });
 
@@ -171,7 +164,7 @@ describe("POST /api/holdings", () => {
       { ticker: "VAS.AX", shares: 100 },
       { ticker: "FAKE.AX", shares: 50 },
     ];
-    const { status, body } = await getTopHoldingsFromRoute(portfolio);
+    const { status, body } = await getTopHoldings(portfolio);
     expect(status).toBe(500);
     expect(body.message).toContain("FAKE.AX");
   });

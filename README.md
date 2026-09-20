@@ -8,6 +8,22 @@ Most portfolio trackers, analysers and visualisers stop at the ticker level. If 
 
 View on desktop for the best experience.
 
+## How it Works and the Math Behind it
+
+For a set of positions, (t_i, s_i) denoting the ith ticker symbol and the number of shares held for that ticker,
+
+Net Liquidation Value (NLV) = sum(v_i) where v_i = s_i * p(t_i), p(t_i) is the price of the ith ticker.
+
+Each position's weight in the portfolio, w(t_i) is an element of [0, 1] and sum(w(t_i)) = 1 by w(t_i) = v_i / NLV.
+
+The contribution of an underlying holding inside that position is rescaled to the whole portfolio given by,
+
+contribution(h, t) = w(t) * w(h, t)
+
+The total exposure of a holding inside a portfolio is the sum of all contributions from all positions denoted by,
+
+Exposure(h) = sum(contribution(h, t)) where t: h (is an element of) t
+
 ## Tech Stack
 
 **Frontend**
