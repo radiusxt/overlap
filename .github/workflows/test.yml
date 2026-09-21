@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Pings live production database with read-only permissions
+      # Pings production database with read-only permissions
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_READONLY_DB_URL }}
 
     steps:

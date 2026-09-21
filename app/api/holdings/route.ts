@@ -72,8 +72,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
   }, new Map<string, Holding>());
 
   // Sort holdings by their aggregated exposure and keep the top n
-  return [...aggregated.values()]
-    .sort((a, b) => b.weight - a.weight).slice(0, n);
+  return [...aggregated.values()].sort((a, b) => b.weight - a.weight).slice(0, n);
 }
 
 export async function POST(request: Request) {
