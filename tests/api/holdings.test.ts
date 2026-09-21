@@ -47,7 +47,7 @@ function assertTopHoldings(actual: any[], expected: ExpectedHolding[]) {
   });
 }
 
-// Test
+// Tests
 describe("POST /api/holdings", () => {
   // Portfolio 1: 500 x VAS.AX only.
   // totalValue = 500 * 100 = 50,000 -> VAS.AX weight = 1.0

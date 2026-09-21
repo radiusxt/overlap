@@ -42,7 +42,7 @@ export const IHVV_VAS: Position[] = [
   },
 ];
 
-// Typical ASX portfolio an Australian might have
+// Typical ASX portfolio someone might have
 export const IVV_NDQ_VAS: Position[] = [
   {
     ticker: "IVV.AX",

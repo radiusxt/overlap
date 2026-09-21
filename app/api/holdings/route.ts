@@ -32,8 +32,9 @@ interface Row {
   weight: number;
 }
 
+// Returns the top n underlying holdings of a portfolio
 function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) {
-  // Find value of each position and total portfolio value
+  // Find the value of each position and total portfolio value
   const values = portfolio.map(position =>
     position.shares * prices.get(position.ticker)!
   );
@@ -43,10 +44,12 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
     return [];
   }
 
+  // Find the weight of each ticker inside the portfolio
   const weightByTicker = new Map(
     portfolio.map((p, i) => [p.ticker, values[i] / totalValue])
   );
 
+  // Reduce duplicate holdings from ETFs into a single combined holding
   const aggregated = holdings.reduce((acc, h) => {
     // Retrieve the portfolio contribution of a holding
     const contributionPct = (weightByTicker.get(h.etf_ticker) ?? 0) * h.weight;
@@ -68,6 +71,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
     return acc;
   }, new Map<string, Holding>());
 
+  // Sort holdings by their aggregated exposure and keep the top n
   return [...aggregated.values()]
     .sort((a, b) => b.exposure_pct - a.exposure_pct).slice(0, n);
 }
@@ -89,7 +93,8 @@ export async function POST(request: Request) {
     const prices = new Map(tickers.map((ticker, i) =>
       [ticker, quotes[i].regularMarketPrice])
     );
-
+    
+    // If a ticker is missed, fail loudly since it throws off exposure calculations
     const missing = tickers.filter(ticker => !prices.get(ticker));
     
     if (missing.length > 0) {
