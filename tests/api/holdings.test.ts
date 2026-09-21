@@ -54,10 +54,9 @@ describe("POST /api/holdings", () => {
   // Every VAS holding's weight = 1.0 * its own weight, i.e. unchanged.
   // Price-independent: VAS.AX is the only ETF held, so this portfolio's
   // result doesn't change with the IVV/IHVV/NDQ price update.
-  it("portfolio 1 (500 VAS.AX): top holdings equal VAS.AX's own top 10", async () => {
-    const { status, body } = await getTopHoldings(
-      MOCK_PORTFOLIOS.p1
-    );
+  it("Portfolio 1", async () => {
+    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p1);
+
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
       { holding_ticker: "CBA", weight: 10.0 },
@@ -79,10 +78,9 @@ describe("POST /api/holdings", () => {
   // No overlap between VAS (ASX) and IVV (US) holdings, so no merging.
   // None of IVV.AX's ranks 11-15 (AMD, JNJ, XOM, UNH, HD) are big enough,
   // even at 61% portfolio weight, to crack the top 10 here.
-  it("portfolio 2 (200 VAS.AX + 450 IVV.AX): blends AU banks with US mega-caps", async () => {
-    const { status, body } = await getTopHoldings(
-      MOCK_PORTFOLIOS.p2
-    );
+  it("Portfolio 2", async () => {
+    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p2);
+
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
       { holding_ticker: "AAPL", weight: 4.281553 },
@@ -103,10 +101,9 @@ describe("POST /api/holdings", () => {
   // VAS.AX weight = 15,000/41,000 = 0.365854
   // IHVV.AX weight = 26,000/41,000 = 0.634146
   // IHVV.AX shares IVV.AX's constituents (same index, hedged).
-  it("portfolio 3 (150 VAS.AX + 400 IHVV.AX): AU-heavier blend via the hedged S&P 500 ETF", async () => {
-    const { status, body } = await getTopHoldings(
-      MOCK_PORTFOLIOS.p3
-    );
+  it("Portfolio 3", async () => {
+    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p3);
+
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
       { holding_ticker: "AAPL", weight: 4.439024 },
@@ -138,10 +135,9 @@ describe("POST /api/holdings", () => {
   // top comment for the full explanation of why the ceiling for a
   // stays-below-both-cutoffs holding (~1.22%) can't quite clear that bar
   // in this specific blend.
-  it("portfolio 4 (100 VAS.AX + 275 NDQ.AX + 500 IVV.AX): merges overlapping tech weight from NDQ.AX and IVV.AX", async () => {
-    const { status, body } = await getTopHoldings(
-      MOCK_PORTFOLIOS.p4
-    );
+  it("Portfolio 4", async () => {
+    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p4);
+
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
       { holding_ticker: "AAPL", weight: 6.264228 }, // 275*60/61500*8.5 + 500*70/61500*7.0
@@ -157,14 +153,14 @@ describe("POST /api/holdings", () => {
     ]);
   });
 
-  // Error path: a ticker with no available price should fail the whole
-  // request with a 500, never silently drop the ticker or default to 0.
-  it("returns 500 with a descriptive message when a ticker has no price data", async () => {
+  it("Portfolio with fake ticker", async () => {
     const portfolio: Position[] = [
       { ticker: "VAS.AX", shares: 100 },
       { ticker: "FAKE.AX", shares: 50 },
     ];
+
     const { status, body } = await getTopHoldings(portfolio);
+
     expect(status).toBe(500);
     expect(body.message).toContain("FAKE.AX");
   });

@@ -24,9 +24,7 @@ $$w(t_i) = \frac{v_i}{\text{NLV}}$$
 
 with $w(t_i) \in [0, 1]$ and $\sum_i w(t_i) = 1$.
 
-Let $t$ refer generically to "some position in the portfolio" rather than a specific index.
-
-Let $\omega(h, t)$ be holding $h$'s weight *within* ETF $t$, as disclosed by the fund's investment principles, often described as a **percentage**, $\omega(h, t) \in [0, 100]$, not a fraction like $w(t)$. A holding's contribution to the overall portfolio, rescaled through position $t$, is:
+Let $t$ refer generically to "some position in the portfolio" rather than a specific index and $\omega(h, t)$ be holding $h$'s weight *within* ETF $t$, as disclosed by the fund's investment principles. This is often described as a **percentage**, $\omega(h, t) \in [0, 100]$, not a fraction like $w(t)$. A holding's contribution to the overall portfolio, rescaled through position $t$, is:
 
 $$\text{contribution}(h, t) = w(t) \cdot \omega(h, t)$$
 

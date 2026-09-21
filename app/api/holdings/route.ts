@@ -14,7 +14,7 @@ interface Holding {
   holding_name: string;
   sector: string;
   country: string;
-  exposure_pct: number;
+  weight: number;
 }
 
 interface Position {
@@ -56,7 +56,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
     const existing = acc.get(h.holding_ticker);
 
     if (existing) {
-      existing.exposure_pct += contributionPct;
+      existing.weight += contributionPct;
 
     } else {
       acc.set(h.holding_ticker, {
@@ -64,7 +64,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
         holding_name: h.holding_name,
         sector: h.sector,
         country: h.country,
-        exposure_pct: contributionPct,
+        weight: contributionPct,
       });
     }
 
@@ -73,7 +73,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
 
   // Sort holdings by their aggregated exposure and keep the top n
   return [...aggregated.values()]
-    .sort((a, b) => b.exposure_pct - a.exposure_pct).slice(0, n);
+    .sort((a, b) => b.weight - a.weight).slice(0, n);
 }
 
 export async function POST(request: Request) {
