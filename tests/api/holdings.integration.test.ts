@@ -44,11 +44,13 @@ interface Row {
 
 // Mock Yahoo Finance
 vi.mock("yahoo-finance2", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    quote: vi.fn(async (ticker: string) => ({
-      regularMarketPrice: MOCK_PRICES[ticker],
-    })),
-  })),
+  default: vi.fn().mockImplementation(function () {
+    return {
+      quote: vi.fn(async (ticker: string) => ({
+        regularMarketPrice: MOCK_PRICES[ticker],
+      })),
+    };
+  }),
 }));
 
 const TICKERS = ["IHVV.AX", "IVV.AX", "NDQ.AX", "VAS.AX"];
