@@ -1,8 +1,7 @@
 /**
  * Unit tests for api/holdings/route.ts
  *
- * This tests on whether the formula behind the logic is correct
- * and producing exact outputs.
+ * This tests on whether the math behind the logic is correct on producing exact outputs.
  */ 
 
 import { describe, expect, it, vi } from "vitest";
@@ -64,16 +63,46 @@ describe("Unit tests for POST /api/holdings", () => {
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "CBA", weight: 10.0 },
-      { holding_ticker: "BHP", weight: 8.0 },
-      { holding_ticker: "CSL", weight: 6.0 },
-      { holding_ticker: "NAB", weight: 5.0 },
-      { holding_ticker: "WBC", weight: 4.5 },
-      { holding_ticker: "ANZ", weight: 4.0 },
-      { holding_ticker: "WES", weight: 3.5 },
-      { holding_ticker: "MQG", weight: 3.0 },
-      { holding_ticker: "TLS", weight: 2.5 },
-      { holding_ticker: "WOW", weight: 2.0 },
+      {
+        holding_ticker: "CBA",
+        weight: 10.0
+      },
+      {
+        holding_ticker: "BHP",
+        weight: 8.0
+      },
+      {
+        holding_ticker: "CSL",
+        weight: 6.0
+      },
+      {
+        holding_ticker: "NAB",
+        weight: 5.0
+      },
+      {
+        holding_ticker: "WBC",
+        weight: 4.5
+      },
+      {
+        holding_ticker: "ANZ",
+        weight: 4.0
+      },
+      {
+        holding_ticker: "WES",
+        weight: 3.5
+      },
+      {
+        holding_ticker: "MQG",
+        weight: 3.0
+      },
+      {
+        holding_ticker: "TLS",
+        weight: 2.5
+      },
+      {
+        holding_ticker: "WOW",
+        weight: 2.0
+      },
     ]);
   });
 
@@ -82,16 +111,46 @@ describe("Unit tests for POST /api/holdings", () => {
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", weight: 4.281553 },
-      { holding_ticker: "MSFT", weight: 3.975728 },
-      { holding_ticker: "CBA", weight: 3.883495 },
-      { holding_ticker: "NVDA", weight: 3.669903 },
-      { holding_ticker: "BHP", weight: 3.106796 },
-      { holding_ticker: "CSL", weight: 2.330097 },
-      { holding_ticker: "AMZN", weight: 2.140777 },
-      { holding_ticker: "NAB", weight: 1.941748 },
-      { holding_ticker: "WBC", weight: 1.747573 },
-      { holding_ticker: "ANZ", weight: 1.553398 },
+      {
+        holding_ticker: "AAPL",
+        weight: 4.281553
+      },
+      {
+        holding_ticker: "MSFT",
+        weight: 3.975728
+      },
+      {
+        holding_ticker: "CBA",
+        weight: 3.883495
+      },
+      {
+        holding_ticker: "NVDA",
+        weight: 3.669903
+      },
+      {
+        holding_ticker: "BHP",
+        weight: 3.106796
+      },
+      {
+        holding_ticker: "CSL",
+        weight: 2.330097
+      },
+      {
+        holding_ticker: "AMZN",
+        weight: 2.140777
+      },
+      {
+        holding_ticker: "NAB",
+        weight: 1.941748
+      },
+      {
+        holding_ticker: "WBC",
+        weight: 1.747573
+      },
+      {
+        holding_ticker: "ANZ",
+        weight: 1.553398
+      },
     ]);
   });
 
@@ -100,16 +159,46 @@ describe("Unit tests for POST /api/holdings", () => {
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", weight: 4.439024 },
-      { holding_ticker: "MSFT", weight: 4.121951 },
-      { holding_ticker: "NVDA", weight: 3.804878 },
-      { holding_ticker: "CBA", weight: 3.658537 },
-      { holding_ticker: "BHP", weight: 2.926829 },
-      { holding_ticker: "AMZN", weight: 2.219512 },
-      { holding_ticker: "CSL", weight: 2.195122 },
-      { holding_ticker: "NAB", weight: 1.829268 },
-      { holding_ticker: "WBC", weight: 1.646341 },
-      { holding_ticker: "ANZ", weight: 1.463415 },
+      {
+        holding_ticker: "AAPL",
+        weight: 4.439024
+      },
+      {
+        holding_ticker: "MSFT",
+        weight: 4.121951
+      },
+      {
+        holding_ticker: "NVDA",
+        weight: 3.804878
+      },
+      {
+        holding_ticker: "CBA",
+        weight: 3.658537
+      },
+      {
+        holding_ticker: "BHP",
+        weight: 2.926829
+      },
+      {
+        holding_ticker: "AMZN",
+        weight: 2.219512
+      },
+      {
+        holding_ticker: "CSL",
+        weight: 2.195122
+      },
+      {
+        holding_ticker: "NAB",
+        weight: 1.829268
+      },
+      {
+        holding_ticker: "WBC",
+        weight: 1.646341
+      },
+      {
+        holding_ticker: "ANZ",
+        weight: 1.463415
+      },
     ]);
   });
 
@@ -118,16 +207,46 @@ describe("Unit tests for POST /api/holdings", () => {
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
-      { holding_ticker: "AAPL", weight: 6.264228 }, // 275*60/61500*8.5 + 500*70/61500*7.0
-      { holding_ticker: "MSFT", weight: 5.845528 },
-      { holding_ticker: "NVDA", weight: 5.426829 },
-      { holding_ticker: "AMZN", weight: 3.333333 },
-      { holding_ticker: "META", weight: 2.077236 },
-      { holding_ticker: "AVGO", weight: 1.926829 },
-      { holding_ticker: "GOOGL", weight: 1.889431 },
-      { holding_ticker: "GOOG", weight: 1.695122 },
-      { holding_ticker: "CBA", weight: 1.626016 }, // 100*100/61500*10.0
-      { holding_ticker: "TSLA", weight: 1.524390 },
+      {
+        holding_ticker: "AAPL",
+        weight: 6.264228
+      },
+      {
+        holding_ticker: "MSFT",
+        weight: 5.845528
+      },
+      {
+        holding_ticker: "NVDA",
+        weight: 5.426829
+      },
+      {
+        holding_ticker: "AMZN",
+        weight: 3.333333
+      },
+      {
+        holding_ticker: "META",
+        weight: 2.077236
+      },
+      {
+        holding_ticker: "AVGO",
+        weight: 1.926829
+      },
+      {
+        holding_ticker: "GOOGL",
+        weight: 1.889431
+      },
+      {
+        holding_ticker: "GOOG",
+        weight: 1.695122
+      },
+      {
+        holding_ticker: "CBA",
+        weight: 1.626016
+      },
+      {
+        holding_ticker: "TSLA",
+        weight: 1.524390
+      },
     ]);
   });
 

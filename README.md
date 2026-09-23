@@ -30,7 +30,7 @@ $$\text{contribution}(h, t) = w(t) \cdot \omega(h, t)$$
 
 Since $w(t)$ is a fraction and $\omega(h, t)$ is a percentage, $\text{contribution}(h, t)$ is described as **percentage points of the whole portfolio**.
 
-The same holding can appear in more than one ETF in the portfolio and with how many options there are, overlap between them is common. Its total exposure is the sum of its contribution across every position that holds it:
+The same holding can appear in more than one ETF and with how many options there are, overlap between them is common. Its total exposure is the sum of its contribution across every position that holds it:
 
 $$\text{Exposure}(h) = \sum_{t \,:\, h \in t} \text{contribution}(h, t)$$
 
