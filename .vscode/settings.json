@@ -16,5 +16,5 @@
         "editor.insertSpaces": true
     },
     "editor.detectIndentation": false,
-    "python.defaultInterpreterPath": "${workspaceFolder}/data/venv/bin/python",
+    "python.defaultInterpreterPath": "${workspaceFolder}/data/.venv/bin/python",
 }

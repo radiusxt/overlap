@@ -1,0 +1,7 @@
+allowBuilds:
+  unrs-resolver: true
+permissions:
+  '@tanstack/react-table':
+    skills: true
+  yahoo-finance2:
+    skills: true

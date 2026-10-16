@@ -1,5 +1,4 @@
--- This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
+-- This schema is for context only and is not meant to be run. Table order and constraints may not be valid for execution.
 
 CREATE TABLE public.etf_holdings (
   id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
