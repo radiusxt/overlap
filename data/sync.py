@@ -201,7 +201,7 @@ def upsert(df: pd.DataFrame):
             )
 
             if cur.rowcount:
-                print(f"Removed {cur.rowcount} stale holding{'s' if new > 1 else ''} for {etf_ticker}.")
+                print(f"Removed {cur.rowcount} stale holding{'s' if cur.rowcount > 1 else ''} for {etf_ticker}.")
 
     connection.commit()
     connection.close()

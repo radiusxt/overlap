@@ -1,8 +1,0 @@
-babel
-openpyxl
-pandas
-psycopg[binary]
-pycountry
-pytest
-python-dotenv
-requests
