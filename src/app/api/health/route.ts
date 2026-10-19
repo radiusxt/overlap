@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
-import { sql } from "@/utils/postgres"
+import { NextResponse } from "next/server";
+import { sql } from "@/utils/postgres";
 
 export async function GET() {
   try {

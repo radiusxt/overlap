@@ -1,6 +1,6 @@
 // Synthetic ETF holdings and pricing to mock postgres and yahoo finance.
 
-export interface Row {
+interface Row {
   etf_ticker: string;
   holding_ticker: string;
   holding_name: string;

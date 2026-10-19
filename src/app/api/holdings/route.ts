@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { HoldingsProps, Holding, Position, Row } from "@/types/api/api";
-import { sql } from "@/utils/postgres";
+import { HoldingsProps, Holding, Position, Row } from "@/types";
+import { sql } from "@/utils";
 import YahooFinance from "yahoo-finance2";
 
 // Returns the top n underlying holdings of a portfolio
@@ -9,6 +9,7 @@ function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) 
   const values = portfolio.map(position =>
     position.shares * prices.get(position.ticker)!
   );
+
   const totalValue = values.reduce((sum, value) => sum + value, 0);
 
   if (totalValue === 0) {

@@ -7,9 +7,8 @@
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/holdings/route";
-import { MOCK_PRICES } from "@/tests/fixtures/db.fixtures";
-import { MOCK_PORTFOLIOS, type Position } from "@/tests/fixtures/portfolio.fixtures";
-import { sql } from "@/utils/postgres";
+import { type Position, MOCK_PORTFOLIOS, MOCK_PRICES } from "@/tests/fixtures/";
+import { sql } from "@/utils";
 
 // Mock Yahoo Finance
 vi.mock("yahoo-finance2", () => ({

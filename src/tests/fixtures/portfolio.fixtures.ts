@@ -11,7 +11,7 @@ export interface Position {
 }
 
 // Single ASX ETF
-export const VAS: Position[] = [
+const VAS: Position[] = [
   {
     ticker: "VAS.AX",
     shares: 500
@@ -19,7 +19,7 @@ export const VAS: Position[] = [
 ];
 
 // Dual ASX ETFs with 2 distinct regions
-export const IVV_VAS: Position[] = [
+const IVV_VAS: Position[] = [
   {
     ticker: "IVV.AX",
     shares: 450
@@ -31,7 +31,7 @@ export const IVV_VAS: Position[] = [
 ];
 
 // Dual ASX ETFs with hedging
-export const IHVV_VAS: Position[] = [
+const IHVV_VAS: Position[] = [
   {
     ticker: "IHVV.AX",
     shares: 400
@@ -43,7 +43,7 @@ export const IHVV_VAS: Position[] = [
 ];
 
 // Typical ASX portfolio someone might have
-export const IVV_NDQ_VAS: Position[] = [
+const IVV_NDQ_VAS: Position[] = [
   {
     ticker: "IVV.AX",
     shares: 500
