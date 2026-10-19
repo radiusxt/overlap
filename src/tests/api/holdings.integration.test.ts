@@ -14,9 +14,11 @@ import { sql } from "@/utils/postgres";
 vi.mock("yahoo-finance2", () => ({
   default: vi.fn().mockImplementation(function () {
     return {
-      quote: vi.fn(async (ticker: string) => ({
-        regularMarketPrice: MOCK_PRICES[ticker],
-      })),
+      quote: vi.fn(async (tickers: string[]) =>
+        tickers
+          .filter((symbol) => symbol in MOCK_PRICES)
+          .map((symbol) => ({ symbol, regularMarketPrice: MOCK_PRICES[symbol] }))
+      ),
     };
   }),
 }));
@@ -97,14 +99,14 @@ function getExpectedTopHoldings({ portfolio, prices, holdings, n = 10 }: Holding
 }
 
 function buildRequest(portfolio: Position[]): Request {
-  return new Request("http://localhost/api/holdings", {
+  return new Request("http://localhost/api/portfolio", {
     method: "POST",
     body: JSON.stringify(portfolio),
   });
 }
 
 // Tests
-describe("Integration tests for POST /api/holdings", () => {
+describe("Integration tests for POST /api/portfolio", () => {
   it.each([
     ["Portfolio 1", MOCK_PORTFOLIOS.p1],
     ["Portfolio 2", MOCK_PORTFOLIOS.p2],

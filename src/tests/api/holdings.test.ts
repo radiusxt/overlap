@@ -20,9 +20,11 @@ vi.mock("@/utils/postgres", () => ({
 vi.mock("yahoo-finance2", () => ({
   default: vi.fn().mockImplementation(function () {
     return {
-      quote: vi.fn(async (ticker: string) => ({
-        regularMarketPrice: MOCK_PRICES[ticker],
-      })),
+      quote: vi.fn(async (tickers: string[]) =>
+        tickers
+          .filter((symbol) => symbol in MOCK_PRICES)
+          .map((symbol) => ({ symbol, regularMarketPrice: MOCK_PRICES[symbol] }))
+      ),
     };
   }),
 }));
@@ -33,7 +35,7 @@ interface ExpectedHolding {
 }
 
 function buildRequest(portfolio: Position[]): Request {
-  return new Request("http://localhost/api/holdings", {
+  return new Request("http://localhost/api/portfolio", {
     method: "POST",
     body: JSON.stringify(portfolio),
   });
@@ -55,7 +57,7 @@ function assertTopHoldings(actual: any[], expected: ExpectedHolding[]) {
 }
 
 // Tests
-describe("Unit tests for POST /api/holdings", () => {
+describe("Unit tests for POST /api/portfolio", () => {
   // The result should match the ETF's underlying exactly
   it("Portfolio 1", async () => {
     const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p1);
