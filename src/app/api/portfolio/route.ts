@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parse, loadPortfolio, getContributions, getTopHoldings, groupBy } from "@/lib/api";
+import { parse, loadPortfolio, getContributions, getTopHoldings, groupBy } from "@/lib";
 import { Position } from "@/types";
 
 // Returns different groupings of underlying holdings in a portfolio

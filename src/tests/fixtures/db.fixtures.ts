@@ -416,3 +416,9 @@ export const MOCK_PRICES: Record<string, number> = {
   "NDQ.AX": 60,
   "VAS.AX": 100,
 };
+
+export async function mockQuote(symbols: string[]) {
+  return symbols
+    .filter((symbol) => symbol in MOCK_PRICES)
+    .map((symbol) => ({ symbol, regularMarketPrice: MOCK_PRICES[symbol] }));
+}

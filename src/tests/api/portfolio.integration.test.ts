@@ -1,5 +1,5 @@
 /**
- * Integration tests for api/holdings/route.ts
+ * Integration tests for api/portfolio/route.ts
  * 
  * This tests whether the pipeline from SQL query to
  * ticker matching behave the way the code assumes.
@@ -7,19 +7,13 @@
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/portfolio/route";
-import { type Position, MOCK_PORTFOLIOS, MOCK_PRICES } from "@/tests/fixtures";
+import { type Position, MOCK_PORTFOLIOS, MOCK_PRICES, mockQuote } from "@/tests/fixtures";
 import { sql } from "@/utils/postgres";
 
 // Mock Yahoo Finance
 vi.mock("yahoo-finance2", () => ({
   default: vi.fn().mockImplementation(function () {
-    return {
-      quote: vi.fn(async (tickers: string[]) =>
-        tickers
-          .filter((symbol) => symbol in MOCK_PRICES)
-          .map((symbol) => ({ symbol, regularMarketPrice: MOCK_PRICES[symbol] }))
-      ),
-    };
+    return { quote: vi.fn(mockQuote) };
   }),
 }));
 
@@ -106,6 +100,7 @@ function buildRequest(portfolio: Position[]): Request {
 }
 
 // Tests
+
 describe("Integration tests for POST /api/portfolio", () => {
   it.each([
     ["Portfolio 1", MOCK_PORTFOLIOS.p1],
@@ -130,5 +125,21 @@ describe("Integration tests for POST /api/portfolio", () => {
       expect(body.top_holdings[i].holding_ticker, `rank ${i + 1}`).toBe(exp.holding_ticker);
       expect(body.top_holdings[i].weight, `${exp.holding_ticker} weight`).toBeCloseTo(exp.weight, 6);
     });
+  });
+
+  it("returns a well-formed ranking for live holdings", async () => {
+    const response = await POST(buildRequest(MOCK_PORTFOLIOS.p4));
+    const { top_holdings } = await response.json();
+    const weights: number[] = top_holdings.map((h: { weight: number }) => h.weight);
+
+    expect(weights).toEqual([...weights].sort((a, b) => b - a));
+    expect(weights.every((w) => w > 0)).toBe(true);
+    // Shares of the portfolio can't exceed 100%; small tolerance for issuer rounding
+    expect(weights.reduce((sum, w) => sum + w, 0)).toBeLessThanOrEqual(100.5);
+  });
+
+  it("rejects an ETF with no live holdings", async () => {
+    const response = await POST(buildRequest([{ ticker: "FAKE.AX", shares: 10 }]));
+    expect(response.status).toBe(500);
   });
 });

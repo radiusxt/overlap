@@ -1,12 +1,12 @@
 /**
- * Unit tests for api/holdings/route.ts
+ * Unit tests for api/portfolio/route.ts
  *
  * This tests on whether the math behind the logic is correct on producing exact outputs.
  */ 
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/portfolio/route";
-import { type Position, MOCK_HOLDINGS, MOCK_PORTFOLIOS, MOCK_PRICES } from "@/tests/fixtures";
+import { type Position, MOCK_HOLDINGS, MOCK_PORTFOLIOS, mockQuote } from "@/tests/fixtures";
 
 // Mock DB 
 vi.mock("@/utils/postgres", () => ({
@@ -17,15 +17,11 @@ vi.mock("@/utils/postgres", () => ({
 }));
 
 // Mock Yahoo Finance
+const { quote } = vi.hoisted(() => ({ quote: vi.fn() }));
+
 vi.mock("yahoo-finance2", () => ({
   default: vi.fn().mockImplementation(function () {
-    return {
-      quote: vi.fn(async (tickers: string[]) =>
-        tickers
-          .filter((symbol) => symbol in MOCK_PRICES)
-          .map((symbol) => ({ symbol, regularMarketPrice: MOCK_PRICES[symbol] }))
-      ),
-    };
+    return { quote };
   }),
 }));
 
@@ -34,14 +30,14 @@ interface ExpectedHolding {
   weight: number; // as a percentage
 }
 
-function buildRequest(portfolio: Position[]): Request {
+function buildRequest(portfolio: unknown): Request {
   return new Request("http://localhost/api/portfolio", {
     method: "POST",
     body: JSON.stringify(portfolio),
   });
 }
 
-async function getTopHoldings(portfolio: Position[]) {
+async function postPortfolio(portfolio: unknown) {
   const response = await POST(buildRequest(portfolio));
   const body = await response.json();
   return { status: response.status, body };
@@ -57,10 +53,101 @@ function assertTopHoldings(actual: any[], expected: ExpectedHolding[]) {
 }
 
 // Tests
+
+beforeEach(() => {
+  quote.mockReset();
+  quote.mockImplementation(mockQuote);
+});
+
+// Input Validation
+describe("Input validation", () => {
+  it("rejects a body that isn't valid JSON", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/portfolio", { method: "POST", body: "not json" })
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it.each([
+    ["an object", { ticker: "VAS.AX", shares: 100 }],
+    ["an empty array", []],
+    ["null", null],
+  ])("rejects a body that is %s", async (_label, body) => {
+    expect((await postPortfolio(body)).status).toBe(400);
+  });
+
+  it.each([
+    ["a missing ticker", [{ shares: 100 }]],
+    ["a blank ticker", [{ ticker: "  ", shares: 100 }]],
+    ["a non-string ticker", [{ ticker: 123, shares: 100 }]],
+    ["zero shares", [{ ticker: "VAS.AX", shares: 0 }]],
+    ["negative shares", [{ ticker: "VAS.AX", shares: -5 }]],
+    ["string shares", [{ ticker: "VAS.AX", shares: "100" }]],
+    ["null shares", [{ ticker: "VAS.AX", shares: null }]],
+    ["a null position", [null]],
+  ])("rejects a position with %s", async (_label, body) => {
+    expect((await postPortfolio(body)).status).toBe(400);
+  });
+
+  it("merges duplicate tickers by summing their shares", async () => {
+    const merged = await postPortfolio([
+      { ticker: "VAS.AX", shares: 200 },
+      { ticker: "VAS.AX", shares: 300 },
+    ]);
+    const single = await postPortfolio(MOCK_PORTFOLIOS.p1); // 500 shares
+
+    expect(merged.status).toBe(200);
+    expect(merged.body.top_holdings).toEqual(single.body.top_holdings);
+  });
+
+  it("normalises ticker case and whitespace", async () => {
+    const { status, body } = await postPortfolio([{ ticker: " vas.ax ", shares: 500 }]);
+    const single = await postPortfolio(MOCK_PORTFOLIOS.p1);
+
+    expect(status).toBe(200);
+    expect(body.top_holdings).toEqual(single.body.top_holdings);
+  });
+});
+
+// YF & DB Failure Testing
+describe("Pricing failures", () => {
+  it.each([
+    ["no quote at all", []],
+    ["a zero price", [{ symbol: "VAS.AX", regularMarketPrice: 0 }]],
+  ])("fails when Yahoo returns %s", async (_label, quotes) => {
+    quote.mockResolvedValueOnce(quotes);
+
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p1);
+
+    expect(status).toBe(500);
+    expect(body.message).toContain("VAS.AX");
+  });
+
+  it("matches quotes to tickers by symbol, not by position", async () => {
+    const baseline = await postPortfolio(MOCK_PORTFOLIOS.p2);
+
+    quote.mockImplementationOnce(async (symbols: string[]) =>
+      (await mockQuote(symbols)).reverse()
+    );
+    const reversed = await postPortfolio(MOCK_PORTFOLIOS.p2);
+
+    expect(reversed.body.top_holdings).toEqual(baseline.body.top_holdings);
+  });
+
+  it("returns a 500 with the message when Yahoo throws", async () => {
+    quote.mockRejectedValueOnce(new Error("Yahoo unavailable"));
+
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p1);
+
+    expect(status).toBe(500);
+    expect(body.message).toBe("Yahoo unavailable");
+  });
+});
+
 describe("Unit tests for POST /api/portfolio", () => {
   // The result should match the ETF's underlying exactly
   it("Portfolio 1", async () => {
-    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p1);
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p1);
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
@@ -108,7 +195,7 @@ describe("Unit tests for POST /api/portfolio", () => {
   });
 
   it("Portfolio 2", async () => {
-    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p2);
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p2);
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
@@ -156,7 +243,7 @@ describe("Unit tests for POST /api/portfolio", () => {
   });
 
   it("Portfolio 3", async () => {
-    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p3);
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p3);
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
@@ -204,7 +291,7 @@ describe("Unit tests for POST /api/portfolio", () => {
   });
 
   it("Portfolio 4", async () => {
-    const { status, body } = await getTopHoldings(MOCK_PORTFOLIOS.p4);
+    const { status, body } = await postPortfolio(MOCK_PORTFOLIOS.p4);
 
     expect(status).toBe(200);
     assertTopHoldings(body.top_holdings, [
@@ -251,13 +338,26 @@ describe("Unit tests for POST /api/portfolio", () => {
     ]);
   });
 
-  it("Portfolio with fake ticker", async () => {
+  it("returns full holding details and a timestamp", async () => {
+    const { body } = await postPortfolio(MOCK_PORTFOLIOS.p1);
+
+    expect(body.top_holdings[0]).toEqual({
+      holding_ticker: "CBA",
+      holding_name: "Commonwealth Bank of Australia",
+      sector: "Financials",
+      country: "Australia",
+      weight: expect.closeTo(10.0, 3),
+    });
+    expect(new Date(body.timestamp).toISOString()).toBe(body.timestamp);
+  });
+
+  it("Portfolio with unsupported ticker", async () => {
     const portfolio: Position[] = [
       { ticker: "VAS.AX", shares: 100 },
       { ticker: "FAKE.AX", shares: 50 },
     ];
 
-    const { status, body } = await getTopHoldings(portfolio);
+    const { status, body } = await postPortfolio(portfolio);
 
     expect(status).toBe(500);
     expect(body.message).toContain("FAKE.AX");
