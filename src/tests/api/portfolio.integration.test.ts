@@ -7,7 +7,12 @@
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/portfolio/route";
-import { type Position, MOCK_PORTFOLIOS, MOCK_PRICES, mockQuote } from "@/tests/fixtures";
+import {
+  type Position,
+  MOCK_PORTFOLIOS,
+  MOCK_PRICES,
+  mockQuote
+} from "@/tests/fixtures";
 import { sql } from "@/utils/postgres";
 
 // Mock Yahoo Finance
@@ -123,7 +128,8 @@ describe("Integration tests for POST /api/portfolio", () => {
 
     expected.forEach((exp, i) => {
       expect(body.top_holdings[i].holding_ticker, `rank ${i + 1}`).toBe(exp.holding_ticker);
-      expect(body.top_holdings[i].weight, `${exp.holding_ticker} weight`).toBeCloseTo(exp.weight, 6);
+      expect(body.top_holdings[i].weight, `${exp.holding_ticker} weight`)
+        .toBeCloseTo(exp.weight, 6);
     });
   });
 

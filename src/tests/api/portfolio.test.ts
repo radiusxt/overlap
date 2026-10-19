@@ -6,7 +6,12 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/portfolio/route";
-import { type Position, MOCK_HOLDINGS, MOCK_PORTFOLIOS, mockQuote } from "@/tests/fixtures";
+import {
+  type Position,
+  MOCK_HOLDINGS,
+  MOCK_PORTFOLIOS,
+  mockQuote
+} from "@/tests/fixtures";
 
 // Mock DB 
 vi.mock("@/utils/postgres", () => ({
