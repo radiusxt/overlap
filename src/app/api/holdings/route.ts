@@ -1,36 +1,7 @@
-import { NextResponse } from "next/server"
-import { sql } from "@/utils/postgres"
-import YahooFinance from "yahoo-finance2"
-
-interface HoldingsProps {
-  portfolio: Position[],
-  prices: Map<string, number>,
-  holdings: Row[],
-  n?: number
-}
-
-interface Holding {
-  holding_ticker: string;
-  holding_name: string;
-  sector: string;
-  country: string;
-  weight: number;
-}
-
-interface Position {
-  ticker: string;
-  shares: number;
-}
-
-interface Row {
-  etf_ticker: string;
-  holding_ticker: string;
-  holding_name: string;
-  sector: string;
-  country: string;
-  currency: string;
-  weight: number;
-}
+import { NextResponse } from "next/server";
+import { HoldingsProps, Holding, Position, Row } from "@/types/api/api";
+import { sql } from "@/utils/postgres";
+import YahooFinance from "yahoo-finance2";
 
 // Returns the top n underlying holdings of a portfolio
 function getTopHoldings({ portfolio, prices, holdings, n = 10 }: HoldingsProps) {

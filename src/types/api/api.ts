@@ -1,11 +1,11 @@
-interface HoldingsProps {
+export interface HoldingsProps {
   portfolio: Position[],
   prices: Map<string, number>,
   holdings: Row[],
   n?: number
 }
 
-interface Holding {
+export interface Holding {
   holding_ticker: string;
   holding_name: string;
   sector: string;
@@ -13,12 +13,12 @@ interface Holding {
   weight: number;
 }
 
-interface Position {
+export interface Position {
   ticker: string;
   shares: number;
 }
 
-interface Row {
+export interface Row {
   etf_ticker: string;
   holding_ticker: string;
   holding_name: string;
