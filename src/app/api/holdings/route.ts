@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { HoldingsProps, Holding, Position, Row } from "@/types";
-import { sql } from "@/utils";
+import { sql } from "@/utils/postgres";
 import YahooFinance from "yahoo-finance2";
 
 // Returns the top n underlying holdings of a portfolio
