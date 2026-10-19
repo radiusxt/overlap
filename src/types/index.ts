@@ -1,1 +1,1 @@
-export { type HoldingsProps, type Holding, type Position, type Row } from "@/types/api";
+export { type PortfolioProps, type Holding, type Position, type Row } from "@/types/api";

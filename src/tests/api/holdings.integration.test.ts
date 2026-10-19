@@ -6,7 +6,7 @@
  */
 
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/holdings/route";
+import { POST } from "@/app/api/portfolio/route";
 import { type Position, MOCK_PORTFOLIOS, MOCK_PRICES } from "@/tests/fixtures";
 import { sql } from "@/utils/postgres";
 

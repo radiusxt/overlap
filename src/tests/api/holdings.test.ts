@@ -5,7 +5,7 @@
  */ 
 
 import { describe, expect, it, vi } from "vitest";
-import { POST } from "@/app/api/holdings/route";
+import { POST } from "@/app/api/portfolio/route";
 import { type Position, MOCK_HOLDINGS, MOCK_PORTFOLIOS, MOCK_PRICES } from "@/tests/fixtures";
 
 // Mock DB 

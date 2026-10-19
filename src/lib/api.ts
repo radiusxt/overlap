@@ -1,42 +1,63 @@
-import { NextResponse } from "next/server";
-import { Position, Row } from "@/types/api";
+import { PortfolioProps, Holding, Position, Row } from "@/types";
 import { sql } from "@/utils/postgres";
 import YahooFinance from "yahoo-finance2";
 
-export interface PortfolioData {
-  portfolio: Position[];
-  prices: Map<string, number>;
-  holdings: Row[];
+// Validate raw request JSON and normalise it into a clean portfolio
+export function parse(input: unknown): Position[] {
+  if (!Array.isArray(input) || input.length === 0) {
+    throw new Error(`Portfolio must be an array.`);
+  }
+
+  const sharesByTicker = new Map<string, number>();
+
+  for (const p of input) {
+    const ticker = typeof p?.ticker === "string" ? p.ticker.trim().toUpperCase() : "";
+
+    if (!ticker || !Number.isFinite(p.shares) || p.shares <= 0) {
+      throw new Error(`Invalid position: ${JSON.stringify(p)}`);
+    }
+
+    // Merge duplicate tickers by summing their shares
+    sharesByTicker.set(ticker, (sharesByTicker.get(ticker) ?? 0) + p.shares);
+  }
+
+  return [...sharesByTicker].map(([ticker, shares]) => ({ ticker, shares }));
 }
 
-// A holding row from one ETF, with `weight` rescaled to its share of the whole portfolio
-export type Contribution = Row;
-
 // Fetch ETF holdings and live prices for every ticker in the portfolio
-export async function loadPortfolioData(portfolio: Position[]): Promise<PortfolioData> {
+export async function loadPortfolio(portfolio: Position[]): Promise<PortfolioProps> {
   const tickers = portfolio.map(p => p.ticker);
   const yf = new YahooFinance();
 
   const [holdings, quotes] = await Promise.all([
     sql<Row[]>`
-      SELECT etf_ticker, holding_ticker, holding_name,
-        sector, country, currency, weight
+      SELECT etf_ticker, holding_ticker, holding_name, sector, country, currency, weight
       FROM etf_holdings
       WHERE etf_ticker = ANY(${tickers})
     `,
-    Promise.all(tickers.map(ticker => yf.quote(ticker))),
+    yf.quote(tickers),
   ]);
 
   const prices = new Map<string, number>();
-  const missing: string[] = [];
+  const covered = new Set(holdings.map(h => h.etf_ticker));
+  const unsupported = tickers.filter(ticker => !covered.has(ticker));
 
-  tickers.forEach((ticker, i) => {
-    const price = quotes[i].regularMarketPrice;
-    if (price) prices.set(ticker, price);
-    else missing.push(ticker);
-  });
+  if (unsupported.length > 0) {
+    throw new Error(`
+      These ETFs are currently unsupported and have no holdings data available,
+      ${unsupported.join(", ")}
+    `);
+  }
 
-  // Fail loudly: a missing price would silently skew every exposure figure
+  for (const q of quotes) {
+    if (q.regularMarketPrice) {
+      prices.set(q.symbol, q.regularMarketPrice);
+    }
+  }
+
+  // If a ticker is missed, fail loudly since it throws off exposure calculations
+  const missing = tickers.filter(ticker => !prices.has(ticker));
+
   if (missing.length > 0) {
     throw new Error(`No pricing data available for: ${missing.join(", ")}`);
   }
@@ -44,11 +65,35 @@ export async function loadPortfolioData(portfolio: Position[]): Promise<Portfoli
   return { portfolio, prices, holdings };
 }
 
-// Rescale each ETF holding row so `weight` is its share of the whole portfolio
-export function getContributions({ portfolio, prices, holdings }: PortfolioData): Contribution[] {
+// Returns the top n underlying holdings
+export function getTopHoldings(contributions: Row[], n = 10) {
+  const byTicker = new Map<string, Holding>();
+
+  for (const c of contributions) {
+    const existing = byTicker.get(c.holding_ticker);
+
+    if (existing) {
+      existing.weight += c.weight;
+    } else {
+      byTicker.set(c.holding_ticker, {
+        holding_ticker: c.holding_ticker,
+        holding_name: c.holding_name,
+        sector: c.sector,
+        country: c.country,
+        weight: c.weight,
+      });
+    }
+  }
+
+  return [...byTicker.values()].sort((a, b) => b.weight - a.weight).slice(0, n);
+}
+
+// Rescale each ETF holding row so its `weight` is its share of the whole portfolio
+export function getContributions({ portfolio, prices, holdings }: PortfolioProps): Row[] {
   const values = new Map(
     portfolio.map(p => [p.ticker, p.shares * prices.get(p.ticker)!])
   );
+
   const totalValue = [...values.values()].reduce((sum, v) => sum + v, 0);
 
   if (totalValue === 0) {
@@ -62,37 +107,13 @@ export function getContributions({ portfolio, prices, holdings }: PortfolioData)
 }
 
 // Sum contributions by sector, country or currency, largest first
-export function groupBy(contributions: Contribution[], field: "sector" | "country" | "currency") {
+export function groupBy(contributions: Row[], field: "sector" | "country" | "currency") {
   const totals = new Map<string, number>();
 
   for (const c of contributions) {
     totals.set(c[field], (totals.get(c[field]) ?? 0) + c.weight);
   }
 
-  return [...totals]
-    .map(([name, weight]) => ({ name, weight }))
+  return [...totals].map(([name, weight]) => ({ name, weight }))
     .sort((a, b) => b.weight - a.weight);
-}
-
-// Builds a POST handler: parse portfolio -> load data -> compute -> respond
-export function exposureRoute<T>(
-  responseKey: string,
-  compute: (contributions: Contribution[]) => T
-) {
-  return async function POST(request: Request) {
-    try {
-      const portfolio: Position[] = await request.json();
-      const data = await loadPortfolioData(portfolio);
-
-      return NextResponse.json({
-        [responseKey]: compute(getContributions(data)),
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      return NextResponse.json(
-        { message: (error as Error).message },
-        { status: 500 }
-      );
-    }
-  };
 }

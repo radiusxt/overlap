@@ -1,4 +1,4 @@
-export interface HoldingsProps {
+export interface PortfolioProps {
   portfolio: Position[],
   prices: Map<string, number>,
   holdings: Row[],
