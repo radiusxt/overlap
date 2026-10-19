@@ -8,7 +8,7 @@ Most portfolio trackers, analysers and visualisers stop at the ticker level. If 
 
 View on desktop for the best experience.
 
-## The Math Behind it
+## The Underlying Logic
 
 For a set of positions $(t_i, s_i)$, where $t_i$ is the $i$-th ticker symbol and $s_i$ is the number of shares held:
 
@@ -34,7 +34,7 @@ The same holding can appear in several ETFs while overlapping holdings between f
 
 $$\text{Exposure}(h) = \sum_{t \,:\, h \in t} \text{contribution}(h, t)$$
 
-where the sum ranges over positions $t$ whose underlying holdings include $h$. Summed across every distinct underlying holding, $\sum_h \text{Exposure}(h) \approx 100$ when an ETF's disclosed weights don't fully sum to 100 likely due to cash, cash equivalents, derivatives, futures, etc.
+where the sum ranges over positions $t$ whose underlying holdings include $h$. Summed across every distinct underlying holding, $\sum_h \text{Exposure}(h) \approx 100$ when an ETF's disclosed weights don't fully sum to 100 likely due to cash, derivatives, futures, etc.
 
 ## Tech Stack
 
@@ -60,3 +60,7 @@ where the sum ranges over positions $t$ whose underlying holdings include $h$. S
 
 - Pytest
 - Vitest
+
+## Documentation
+
+Docs available [here](https://ui.shadcn.com/docs).
